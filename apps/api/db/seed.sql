@@ -1,5 +1,7 @@
 -- Passenger CO₂e factors from UK DESNZ / DEFRA GHG Conversion Factors 2024.
 -- The API calculator reads these rows. It does not hardcode g/km.
+DELETE FROM emission_factors WHERE mode = 'train';
+
 INSERT INTO emission_factors (mode, g_per_km, source, notes)
 VALUES
   (
@@ -13,11 +15,5 @@ VALUES
     245.8700,
     'DESNZ/DEFRA 2024',
     'Short-haul flight to/from UK, average passenger, with radiative forcing.'
-  ),
-  (
-    'train',
-    35.4900,
-    'DESNZ/DEFRA 2024',
-    'National rail, passenger. kg CO2e/pkm converted to g/km.'
   )
 ON CONFLICT (mode) DO NOTHING;
