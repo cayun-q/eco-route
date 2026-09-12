@@ -12,8 +12,13 @@ import { formatKg } from "../format";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 
+function formatRefreshTime(value: number | null): string | null {
+  if (!value) return null;
+  return new Date(value).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
+}
+
 export function HomeScreen({ navigation }: Props) {
-  const { trips, stats, loading, error, online, refresh } = useStore();
+  const { trips, stats, loading, error, online, lastRefreshedAt, refresh } = useStore();
   const insets = useSafeAreaInsets();
 
   useFocusEffect(
@@ -21,6 +26,8 @@ export function HomeScreen({ navigation }: Props) {
       void refresh();
     }, [refresh]),
   );
+
+  const refreshedLabel = formatRefreshTime(lastRefreshedAt);
 
   return (
     <Screen>
@@ -89,6 +96,9 @@ export function HomeScreen({ navigation }: Props) {
           disabled={loading}
           variant="ghost"
         />
+        {refreshedLabel && online ? (
+          <Text style={styles.refreshed}>Last refreshed {refreshedLabel}</Text>
+        ) : null}
       </ScrollView>
     </Screen>
   );
@@ -179,5 +189,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
     padding: space.md,
+  },
+  refreshed: {
+    marginTop: -space.md,
+    textAlign: "center",
+    fontFamily: font.body,
+    fontSize: 12,
+    color: colors.muted,
   },
 });
