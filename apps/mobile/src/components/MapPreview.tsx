@@ -20,6 +20,9 @@ export function MapPreview({ estimate }: { estimate: RouteEstimate }) {
           origin={estimate.origin}
           destination={estimate.destination}
           polyline={estimate.polyline}
+          mode={estimate.mode}
+          strokeColor={estimate.strokeColor}
+          connectors={estimate.connectors}
         />
       </View>
       <View style={styles.chips}>
@@ -27,6 +30,9 @@ export function MapPreview({ estimate }: { estimate: RouteEstimate }) {
         <Chip label={formatDuration(estimate.durationMin)} selected tone="muted" />
         <Chip label={`${formatKg(estimate.co2eKg)} CO₂e`} selected tone={high ? "clay" : "accent"} />
       </View>
+      {estimate.routerLabel ? (
+        <Text style={styles.note}>{estimate.routerLabel}{estimate.note ? ` — ${estimate.note}` : ""}</Text>
+      ) : null}
     </View>
   );
 }
@@ -72,5 +78,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.line,
+  },
+  note: {
+    fontFamily: font.body,
+    fontSize: 12,
+    color: colors.muted,
+    paddingHorizontal: space.md,
+    paddingBottom: space.md,
   },
 });

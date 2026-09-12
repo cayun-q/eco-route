@@ -18,7 +18,7 @@ export type EmissionFactor = {
   updatedAt?: string;
 };
 
-export type RouteProvider = "haversine" | "mapbox" | "google" | "ors";
+export type RouteProvider = "haversine" | "mapbox" | "google" | "ors" | "osrm" | "airport-arc";
 
 export type RouteEstimate = {
   origin: Place;
@@ -32,6 +32,11 @@ export type RouteEstimate = {
   drivingCo2eKg: number | null;
   vsDrivingKg: number | null;
   provider: RouteProvider;
+  strokeColor?: string;
+  routerLabel?: string;
+  note?: string | null;
+  airports?: { originIata: string; destinationIata: string } | null;
+  connectors?: [number, number][][];
   offline?: boolean;
 };
 

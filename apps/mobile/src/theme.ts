@@ -15,9 +15,9 @@ export const colors = {
   clay: "#A65D3F",
   white: "#FFFFFF",
   mode: {
-    car: "#6E7340",
-    plane: "#A65D3F",
-    train: "#3D5560",
+    car: "#1F6FEB",
+    plane: "#C2410C",
+    train: "#3F6212",
   },
 } as const;
 
