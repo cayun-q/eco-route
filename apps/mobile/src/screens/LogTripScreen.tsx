@@ -122,7 +122,15 @@ function isNoRoadError(err: unknown): boolean {
 function shortLabel(label: string): string { return label.split(",")[0].trim(); }
 
 export function LogTripScreen({ navigation }: Props) {
-  const { saveTrip, defaultLoggingMethod, preferencesLoaded, measurementSystem, displayPrecision, resolvedTheme } = useStore();
+  const {
+    saveTrip,
+    defaultLoggingMethod,
+    preferencesLoaded,
+    measurementSystem,
+    displayPrecision,
+    resolvedTheme,
+    showHiddenOptions,
+  } = useStore();
   const colors = colorsForTheme(resolvedTheme);
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [logMethod, setLogMethod] = useState<LogMethod>(defaultLoggingMethod);
@@ -255,6 +263,10 @@ export function LogTripScreen({ navigation }: Props) {
 
     for (const candidate of all) {
       if (candidate.mode === estimate.mode) continue;
+      if (candidate.mode === "plane") {
+        hidden.push({ route: candidate, reason: "More carbon impact" });
+        continue;
+      }
       const reason = impracticalReason(estimate, candidate);
       if (reason) hidden.push({ route: candidate, reason });
       else viable.push(candidate);
@@ -525,11 +537,18 @@ export function LogTripScreen({ navigation }: Props) {
                     <Text style={styles.noRecommendations}>No other practical routes were available for this trip.</Text>
                   ) : null}
 
-                  {recommendationData.hidden.length ? (
+                  {showHiddenOptions && recommendationData.hidden.length ? (
                     <View style={styles.hiddenBox}>
-                      <Text style={styles.hiddenTitle}>Hidden impractical options ({recommendationData.hidden.length})</Text>
+                      <Text style={styles.hiddenTitle}>Hidden options ({recommendationData.hidden.length})</Text>
                       {recommendationData.hidden.map(({ route, reason }) => (
-                        <Text key={route.mode} style={styles.hiddenItem}>{modeLabel(route.mode)} · {reason}</Text>
+                        <View key={route.mode} style={styles.hiddenRow}>
+                          <Text style={styles.hiddenMode}>{modeLabel(route.mode)}</Text>
+                          {route.mode === "plane" ? (
+                            <View style={styles.hiddenDangerBadge}><Text style={styles.hiddenDangerText}>More carbon impact</Text></View>
+                          ) : (
+                            <Text style={styles.hiddenItem}>{reason}</Text>
+                          )}
+                        </View>
                       ))}
                     </View>
                   ) : null}
@@ -612,8 +631,12 @@ function makeStyles(colors: ThemeColors) {
     useRoutePressed: { backgroundColor: colors.accentPressed },
     useRouteText: { fontFamily: font.bodyBold, fontSize: 12, color: colors.white },
     noRecommendations: { fontFamily: font.body, fontSize: 13, color: colors.muted, paddingVertical: space.sm },
-    hiddenBox: { gap: 4, padding: space.md, borderRadius: radius.card, backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.line },
+    hiddenBox: { gap: 8, padding: space.md, borderRadius: radius.card, backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.line },
     hiddenTitle: { fontFamily: font.bodyMed, fontSize: 12, color: colors.muted },
-    hiddenItem: { fontFamily: font.body, fontSize: 12, lineHeight: 17, color: colors.muted },
+    hiddenRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: space.sm },
+    hiddenMode: { fontFamily: font.bodyMed, fontSize: 12, color: colors.ink },
+    hiddenItem: { flex: 1, minWidth: 180, fontFamily: font.body, fontSize: 12, lineHeight: 17, color: colors.muted, textAlign: "right" },
+    hiddenDangerBadge: { borderRadius: 999, backgroundColor: colors.danger, paddingHorizontal: 9, paddingVertical: 4 },
+    hiddenDangerText: { fontFamily: font.bodyBold, fontSize: 11, color: colors.white },
   });
 }
