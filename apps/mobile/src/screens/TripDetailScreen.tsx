@@ -5,11 +5,13 @@ import type { RouteEstimate } from "@carbonroute/shared";
 import { colors, space, type as font } from "../theme";
 import { Button, Heading, Muted, Screen } from "../ui";
 import { MapPreview } from "../components/MapPreview";
-import { formatDate, formatDuration, formatKg, formatKm, modeLabel, placeDisplayLabel } from "../format";
+import { formatDate, formatDuration, formatFactor, formatKg, formatKm, modeLabel, placeDisplayLabel } from "../format";
+import { useStore } from "../store";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TripDetail">;
 
 export function TripDetailScreen({ navigation, route }: Props) {
+  const { measurementSystem } = useStore();
   const { trip } = route.params;
   const estimate: RouteEstimate = {
     origin: { label: trip.originLabel, lat: trip.originLat, lng: trip.originLng },
@@ -41,10 +43,10 @@ export function TripDetailScreen({ navigation, route }: Props) {
 
         <View style={styles.rows}>
           <Row k="Logging" v={trip.logMethod === "manual" ? "Manual itinerary" : "Automatic"} />
-          <Row k="Distance" v={formatKm(trip.distanceKm)} />
+          <Row k="Distance" v={formatKm(trip.distanceKm, measurementSystem)} />
           <Row k="Duration" v={formatDuration(trip.durationMin)} />
-          <Row k="CO₂e" v={formatKg(trip.co2eKg)} />
-          <Row k="Factor" v={`${trip.factorGPerKm} g/km`} />
+          <Row k="CO₂e" v={formatKg(trip.co2eKg, measurementSystem)} />
+          <Row k="Factor" v={formatFactor(trip.factorGPerKm, measurementSystem)} />
           <Row k="Source" v={trip.factorSource} />
         </View>
 
