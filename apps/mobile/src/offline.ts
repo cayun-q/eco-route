@@ -42,6 +42,10 @@ export async function writeQueue(trips: Trip[]): Promise<void> {
   await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(trips));
 }
 
+export async function clearQueue(): Promise<void> {
+  await AsyncStorage.removeItem(QUEUE_KEY);
+}
+
 export async function enqueueTrip(input: TripInput): Promise<Trip> {
   const trip: Trip = {
     ...input,
