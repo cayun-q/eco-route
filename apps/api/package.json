@@ -9,7 +9,7 @@
     "migrate": "tsx src/db/migrate.ts",
     "seed": "tsx src/db/seed.ts",
     "reset": "tsx src/db/reset.ts",
-    "test": "tsx --test src/services/routing/haversine.test.ts"
+    "test": "tsx --test src/services/routing/haversine.test.ts src/services/routing/ors.test.ts"
   },
   "dependencies": {
     "@carbonroute/shared": "0.1.0",

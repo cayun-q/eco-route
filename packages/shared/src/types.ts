@@ -34,6 +34,8 @@ export interface Route {
   subtype: FactorSubtype;
   distanceMiles: number;
   durationMinutes: number;
+  /** Preview geometry from the routing provider (not persisted). */
+  polyline?: GeoPoint[] | null;
 }
 
 export interface EmissionFactor {
@@ -104,13 +106,20 @@ export interface EstimateResult {
   route: Route;
   emissionFactor: EmissionFactor;
   emissions: EmissionBreakdown;
+  routing?: {
+    provider: string;
+    method: RoutingMethod;
+  };
 }
+
+export type RoutingMethod = "directions" | "haversine" | "mock";
 
 export interface RoutingEstimate {
   distanceMiles: number;
   durationMinutes: number;
   originCoords: GeoPoint;
   destCoords: GeoPoint;
+  polyline: GeoPoint[];
   provider: string;
-  method: "directions" | "haversine" | "mock";
+  method: RoutingMethod;
 }

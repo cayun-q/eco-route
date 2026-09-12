@@ -1,6 +1,7 @@
 import { GoogleRoutingProvider } from "./google.js";
 import { MapboxRoutingProvider } from "./mapbox.js";
 import { MockRoutingProvider } from "./mock.js";
+import { OrsRoutingProvider } from "./ors.js";
 import type { RoutingProvider, RoutingRequest } from "./types.js";
 
 export type { RoutingProvider, RoutingRequest } from "./types.js";
@@ -13,6 +14,8 @@ export function createRoutingProvider(
       return new MapboxRoutingProvider();
     case "google":
       return new GoogleRoutingProvider();
+    case "ors":
+      return new OrsRoutingProvider();
     default:
       return new MockRoutingProvider();
   }

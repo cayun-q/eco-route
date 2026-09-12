@@ -1,5 +1,10 @@
-import { durationMinutesFor, haversineMiles, type RoutingEstimate } from "@carbonroute/shared";
-import { geocodeMock } from "./cities.js";
+import {
+  durationMinutesFor,
+  geocodeMock,
+  greatCirclePolyline,
+  haversineMiles,
+  type RoutingEstimate,
+} from "@carbonroute/shared";
 import type { RoutingProvider, RoutingRequest } from "./types.js";
 
 const ROAD_FACTOR = 1.22;
@@ -13,12 +18,15 @@ export class MockRoutingProvider implements RoutingProvider {
     const dest = request.destCoords ?? geocodeMock(request.destination);
     const greatCircle = haversineMiles(origin, dest);
 
+    const polyline = greatCirclePolyline(origin, dest);
+
     if (request.mode === "plane") {
       return {
         distanceMiles: round1(greatCircle),
         durationMinutes: durationMinutesFor(greatCircle, 480, 45),
         originCoords: origin,
         destCoords: dest,
+        polyline,
         provider: this.name,
         method: "haversine",
       };
@@ -31,6 +39,7 @@ export class MockRoutingProvider implements RoutingProvider {
         durationMinutes: durationMinutesFor(distance, 75, 15),
         originCoords: origin,
         destCoords: dest,
+        polyline,
         provider: this.name,
         method: "mock",
       };
@@ -42,6 +51,7 @@ export class MockRoutingProvider implements RoutingProvider {
       durationMinutes: durationMinutesFor(distance, 50, 8),
       originCoords: origin,
       destCoords: dest,
+      polyline,
       provider: this.name,
       method: "mock",
     };

@@ -1,5 +1,4 @@
-import type { GeoPoint } from "@carbonroute/shared";
-import { geocodeMock } from "./cities.js";
+import { decodeGooglePolyline, geocodeMock, type GeoPoint } from "@carbonroute/shared";
 import { MockRoutingProvider } from "./mock.js";
 import type { RoutingProvider, RoutingRequest } from "./types.js";
 
@@ -40,6 +39,7 @@ export class GoogleRoutingProvider implements RoutingProvider {
       const body = (await response.json()) as {
         status: string;
         routes?: Array<{
+          overview_polyline?: { points?: string };
           legs: Array<{
             distance: { value: number };
             duration: { value: number };
@@ -48,19 +48,32 @@ export class GoogleRoutingProvider implements RoutingProvider {
           }>;
         }>;
       };
-      const leg = body.routes?.[0]?.legs?.[0];
+      const route = body.routes?.[0];
+      const leg = route?.legs?.[0];
       if (body.status !== "OK" || !leg) {
         return this.fallback.estimate(request);
       }
 
+      const originCoords = {
+        lat: leg.start_location.lat,
+        lng: leg.start_location.lng,
+      };
+      const destCoords = { lat: leg.end_location.lat, lng: leg.end_location.lng };
+      const fallback = await this.fallback.estimate({
+        ...request,
+        originCoords,
+        destCoords,
+      });
+      const decoded = route.overview_polyline?.points
+        ? decodeGooglePolyline(route.overview_polyline.points)
+        : [];
+
       return {
         distanceMiles: Math.round((leg.distance.value / 1609.344) * 10) / 10,
         durationMinutes: Math.round(leg.duration.value / 60),
-        originCoords: {
-          lat: leg.start_location.lat,
-          lng: leg.start_location.lng,
-        },
-        destCoords: { lat: leg.end_location.lat, lng: leg.end_location.lng },
+        originCoords,
+        destCoords,
+        polyline: decoded.length >= 2 ? decoded : fallback.polyline,
         provider: this.name,
         method: "directions" as const,
       };

@@ -9,7 +9,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "tsx --test src/calculator.test.ts src/geo.test.ts"
+    "test": "tsx --test src/calculator.test.ts src/geo.test.ts src/polyline.test.ts"
   },
   "devDependencies": {
     "tsx": "^4.20.5"

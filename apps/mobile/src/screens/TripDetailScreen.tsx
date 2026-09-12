@@ -2,12 +2,14 @@ import {
   formatDuration,
   formatEmissions,
   formatMiles,
+  greatCirclePolyline,
   householdDayEquivalent,
   modeLabel,
   subtypeLabel,
 } from "@carbonroute/shared";
 import { StyleSheet, Text, View } from "react-native";
 import { ScrollView } from "react-native";
+import { RouteMap } from "../components/RouteMap";
 import { Button, Card, EmptyState } from "../components/ui";
 import { useApp } from "../context/AppContext";
 import { colors, modeColor } from "../theme";
@@ -38,6 +40,20 @@ export function TripDetailScreen({ tripId }: { tripId: string }) {
           {modeLabel(route.mode)} · {subtypeLabel(route.subtype)}
         </Text>
       </View>
+
+      {route.originCoords && route.destCoords ? (
+        <Card style={styles.mapCard}>
+          <RouteMap
+            origin={route.originCoords}
+            destination={route.destCoords}
+            originLabel={route.origin}
+            destinationLabel={route.destination}
+            polyline={route.polyline ?? greatCirclePolyline(route.originCoords, route.destCoords)}
+            mode={route.mode}
+            height={200}
+          />
+        </Card>
+      ) : null}
 
       <Card style={styles.hero}>
         <Text style={styles.heroLabel}>Estimated emissions</Text>
@@ -100,6 +116,7 @@ const styles = StyleSheet.create({
   heroLabel: { color: colors.muted, fontWeight: "600" },
   heroValue: { color: colors.ink, fontSize: 36, fontWeight: "800", marginTop: 6 },
   heroMeta: { color: colors.muted, marginTop: 8, lineHeight: 20 },
+  mapCard: { padding: 8 },
   queued: { color: colors.warn, marginTop: 10, fontWeight: "700" },
   stats: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   stat: { width: "46%", gap: 4 },

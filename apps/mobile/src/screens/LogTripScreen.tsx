@@ -1,7 +1,5 @@
 import {
   MODE_SUBTYPES,
-  formatEmissions,
-  formatMiles,
   modeLabel,
   subtypeLabel,
   type EstimateResult,
@@ -9,7 +7,7 @@ import {
   type GeoPoint,
   type TravelMode,
 } from "@carbonroute/shared";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -19,9 +17,11 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { RoutePreview } from "../components/RoutePreview";
 import { Button, Card, Chip } from "../components/ui";
 import { useApp } from "../context/AppContext";
 import { getOriginFromGps } from "../lib/location";
+import { hasBothEnds, localRouteGeometry } from "../lib/previewGeometry";
 import { colors } from "../theme";
 
 const SAMPLES = [
@@ -43,11 +43,18 @@ export function LogTripScreen() {
   const [gpsBusy, setGpsBusy] = useState(false);
   const [busy, setBusy] = useState<"estimate" | "save" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const estimateRef = useRef(estimate);
+  const requestRef = useRef(0);
+  estimateRef.current = estimate;
+
+  const ready = hasBothEnds(origin, destination);
+  const geometry = ready
+    ? localRouteGeometry(origin, destination, originCoords, preview?.route.destCoords)
+    : null;
 
   const onMode = (next: TravelMode) => {
     setMode(next);
     setSubtype(MODE_SUBTYPES[next][0]);
-    setPreview(null);
   };
 
   const payload = () => ({
@@ -56,6 +63,7 @@ export function LogTripScreen() {
     mode,
     subtype,
     originCoords,
+    destCoords: preview?.route.destCoords,
     distanceMiles: distanceMiles ? Number(distanceMiles) : undefined,
     durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
   });
@@ -78,31 +86,54 @@ export function LogTripScreen() {
     }
   };
 
-  const onEstimate = async () => {
-    if (!origin.trim() || !destination.trim()) {
-      setError("Add an origin and destination.");
+  useEffect(() => {
+    if (!ready) {
+      setPreview(null);
+      setBusy(null);
       return;
     }
+
+    const token = ++requestRef.current;
     setBusy("estimate");
     setError(null);
-    try {
-      setPreview(await estimate(payload()));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not estimate this route.");
-    } finally {
-      setBusy(null);
-    }
-  };
+    const timer = setTimeout(() => {
+      void estimateRef
+        .current(payload())
+        .then((result) => {
+          if (token !== requestRef.current) return;
+          setPreview(result);
+        })
+        .catch((err) => {
+          if (token !== requestRef.current) return;
+          setError(err instanceof Error ? err.message : "Could not estimate this route.");
+        })
+        .finally(() => {
+          if (token === requestRef.current) setBusy(null);
+        });
+    }, 450);
+
+    return () => {
+      clearTimeout(timer);
+    };
+    // payload() reads the latest form fields; the listed deps are the ones that change it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [origin, destination, mode, subtype, originCoords, distanceMiles, durationMinutes, ready]);
 
   const onSave = async () => {
-    if (!origin.trim() || !destination.trim()) {
+    if (!ready) {
       setError("Add an origin and destination.");
       return;
     }
     setBusy("save");
     setError(null);
     try {
-      const trip = await saveTrip(payload());
+      const trip = await saveTrip({
+        ...payload(),
+        originCoords: preview?.route.originCoords ?? originCoords,
+        destCoords: preview?.route.destCoords,
+        distanceMiles: preview?.route.distanceMiles ?? payload().distanceMiles,
+        durationMinutes: preview?.route.durationMinutes ?? payload().durationMinutes,
+      });
       go({ name: "detail", tripId: trip.id });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save this trip.");
@@ -118,10 +149,10 @@ export function LogTripScreen() {
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.kicker}>Log a trip</Text>
-        <Text style={styles.heading}>Where did you travel?</Text>
+        <Text style={styles.heading}>Plan a trip</Text>
         <Text style={styles.lede}>
-          Distance comes from the routing stub (haversine for flights, mock road/rail for the rest).
-          Drop a Mapbox or Google key on the API later — the app already talks to the same interface.
+          Enter origin and destination first — the map appears once both ends are set, like
+          Google Maps. Emissions still come from the live factor table, not hardcoded g/km.
         </Text>
 
         <Card style={styles.gap}>
@@ -131,11 +162,11 @@ export function LogTripScreen() {
             onChangeText={(value) => {
               setOrigin(value);
               setOriginCoords(null);
-              setPreview(null);
             }}
             placeholder="London"
             placeholderTextColor={colors.muted}
             style={styles.input}
+            autoCorrect={false}
           />
           <Button
             label={gpsBusy ? "Locating…" : "Use current location"}
@@ -146,13 +177,11 @@ export function LogTripScreen() {
           <Text style={styles.label}>Destination</Text>
           <TextInput
             value={destination}
-            onChangeText={(value) => {
-              setDestination(value);
-              setPreview(null);
-            }}
+            onChangeText={setDestination}
             placeholder="Paris"
             placeholderTextColor={colors.muted}
             style={styles.input}
+            autoCorrect={false}
           />
         </Card>
 
@@ -175,10 +204,7 @@ export function LogTripScreen() {
                 key={item}
                 label={subtypeLabel(item)}
                 selected={subtype === item}
-                onPress={() => {
-                  setSubtype(item);
-                  setPreview(null);
-                }}
+                onPress={() => setSubtype(item)}
               />
             ))}
           </View>
@@ -189,6 +215,27 @@ export function LogTripScreen() {
             {online ? "" : " Offline — add distance to log without the API."}
           </Text>
         </Card>
+
+        {ready && geometry ? (
+          <RoutePreview
+            originLabel={origin.trim()}
+            destinationLabel={destination.trim()}
+            origin={preview?.route.originCoords ?? geometry.origin}
+            destination={preview?.route.destCoords ?? geometry.destination}
+            polyline={preview?.route.polyline ?? geometry.polyline}
+            mode={mode}
+            preview={preview}
+            loading={busy === "estimate" && !preview}
+          />
+        ) : (
+          <Card style={styles.placeholder}>
+            <Text style={styles.placeholderTitle}>Route preview</Text>
+            <Text style={styles.hint}>
+              Add both ends to see the path, distance, duration, and estimated emissions
+              before you save.
+            </Text>
+          </Card>
+        )}
 
         <Card style={styles.gap}>
           <Text style={styles.label}>Distance / duration override (optional)</Text>
@@ -231,25 +278,6 @@ export function LogTripScreen() {
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        {preview ? (
-          <Card style={styles.preview}>
-            <Text style={styles.previewLabel}>Estimated emissions</Text>
-            <Text style={styles.previewValue}>
-              {formatEmissions(preview.emissions.gramsCo2e)}
-            </Text>
-            <Text style={styles.hint}>
-              {formatMiles(preview.route.distanceMiles)} · {Math.round(preview.route.durationMinutes)} min ·{" "}
-              {preview.emissionFactor.source}
-            </Text>
-          </Card>
-        ) : null}
-
-        <Button
-          label="Estimate emissions"
-          variant="ghost"
-          loading={busy === "estimate"}
-          onPress={() => void onEstimate()}
-        />
         <Button label="Save trip" loading={busy === "save"} onPress={() => void onSave()} />
         <Button label="Back to dashboard" variant="ghost" onPress={() => go({ name: "home" })} />
       </ScrollView>
@@ -280,7 +308,6 @@ const styles = StyleSheet.create({
   split: { flexDirection: "row", gap: 8 },
   hint: { color: colors.muted, fontSize: 13, lineHeight: 18 },
   error: { color: colors.danger, fontWeight: "600" },
-  preview: { backgroundColor: colors.accentSoft, borderColor: "#B9E4CB" },
-  previewLabel: { color: colors.accentText, fontWeight: "700" },
-  previewValue: { color: colors.ink, fontSize: 28, fontWeight: "800" },
+  placeholder: { backgroundColor: colors.surfaceMuted, gap: 6 },
+  placeholderTitle: { color: colors.ink, fontWeight: "800" },
 });

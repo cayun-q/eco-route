@@ -12,6 +12,9 @@ describe("MockRoutingProvider", () => {
     assert.equal(route.method, "haversine");
     assert.ok(route.distanceMiles > 200 && route.distanceMiles < 230);
     assert.ok(route.durationMinutes > 45);
+    assert.ok(route.polyline.length >= 2);
+    assert.equal(route.polyline[0].lat, route.originCoords.lat);
+    assert.equal(route.polyline[route.polyline.length - 1].lat, route.destCoords.lat);
   });
 
   it("inflates road distance vs great-circle", async () => {

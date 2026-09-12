@@ -1,5 +1,4 @@
-import type { GeoPoint } from "@carbonroute/shared";
-import { geocodeMock } from "./cities.js";
+import { geocodeMock, geoJsonLineToPoints, type GeoPoint } from "@carbonroute/shared";
 import { MockRoutingProvider } from "./mock.js";
 import type { RoutingProvider, RoutingRequest } from "./types.js";
 
@@ -38,25 +37,39 @@ export class MapboxRoutingProvider implements RoutingProvider {
         `https://api.mapbox.com/directions/v5/mapbox/${profile}/${origin.lng},${origin.lat};${dest.lng},${dest.lat}`,
       );
       url.searchParams.set("access_token", this.token);
-      url.searchParams.set("overview", "false");
+      url.searchParams.set("overview", "full");
+      url.searchParams.set("geometries", "geojson");
 
       const response = await fetch(url);
       if (!response.ok) {
         return this.fallback.estimate(request);
       }
       const body = (await response.json()) as {
-        routes?: Array<{ distance: number; duration: number }>;
+        routes?: Array<{
+          distance: number;
+          duration: number;
+          geometry?: { coordinates?: Array<[number, number]> };
+        }>;
       };
       const route = body.routes?.[0];
       if (!route) {
         return this.fallback.estimate(request);
       }
 
+      const fallback = await this.fallback.estimate({
+        ...request,
+        originCoords: origin,
+        destCoords: dest,
+      });
+
       return {
         distanceMiles: Math.round((route.distance / 1609.344) * 10) / 10,
         durationMinutes: Math.round(route.duration / 60),
         originCoords: origin,
         destCoords: dest,
+        polyline: route.geometry?.coordinates?.length
+          ? geoJsonLineToPoints(route.geometry.coordinates)
+          : fallback.polyline,
         provider: this.name,
         method: "directions" as const,
       };

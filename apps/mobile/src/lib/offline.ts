@@ -1,5 +1,7 @@
 import {
   calculateEmissions,
+  geocodeMock,
+  greatCirclePolyline,
   pickFactor,
   resolveSubtype,
   type CreateTripRequest,
@@ -38,19 +40,23 @@ export function localEstimate(
     },
     emissionFactor,
   );
+  const originCoords = input.originCoords ?? geocodeMock(input.origin);
+  const destCoords = input.destCoords ?? geocodeMock(input.destination);
   return {
     route: {
       origin: input.origin,
       destination: input.destination,
-      originCoords: input.originCoords,
-      destCoords: input.destCoords,
+      originCoords,
+      destCoords,
       mode: input.mode,
       subtype,
       distanceMiles: input.distanceMiles,
       durationMinutes: input.durationMinutes,
+      polyline: greatCirclePolyline(originCoords, destCoords),
     },
     emissionFactor,
     emissions,
+    routing: { provider: "offline", method: "mock" },
   };
 }
 

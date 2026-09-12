@@ -7,7 +7,8 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web --port 43123"
+    "web": "expo start --web --port 43123",
+    "test": "tsx --test src/lib/previewGeometry.test.ts"
   },
   "dependencies": {
     "@carbonroute/shared": "0.1.0",
@@ -18,11 +19,13 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-maps": "1.20.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-web": "^0.21.2"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "tsx": "^4.20.5",
     "typescript": "~6.0.3"
   }
 }
