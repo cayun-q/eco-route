@@ -23,12 +23,12 @@ import { useStore } from "../store";
 import { colorsForTheme, space, type as font, type ThemeColors } from "../theme";
 import { Button, Chip, Field, Heading, Muted, Screen } from "../ui";
 import { MapPreview } from "../components/MapPreview";
-import { comparisonCopy, formatFactor } from "../format";
+import { comparisonCopy, formatFactor, modeLabel } from "../format";
 
 type Props = NativeStackScreenProps<RootStackParamList, "LogTrip">;
 
-const MODES: TransportMode[] = ["car", "plane"];
-type CarStatus = "idle" | "checking" | "available" | "unavailable";
+const MODES: TransportMode[] = ["car", "ev", "plane"];
+type RoadStatus = "idle" | "checking" | "available" | "unavailable";
 type ManualLegDraft = { origin: string; destination: string; mode: TransportMode };
 
 type AddressSearchProps = {
@@ -37,6 +37,10 @@ type AddressSearchProps = {
   onChange: (value: string) => void;
   placeholder: string;
 };
+
+function isRoadMode(mode: TransportMode): boolean {
+  return mode === "car" || mode === "ev";
+}
 
 function AddressSearch({ label, value, onChange, placeholder }: AddressSearchProps) {
   const { resolvedTheme } = useStore();
@@ -132,7 +136,7 @@ export function LogTripScreen({ navigation }: Props) {
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
   const [mode, setMode] = useState<TransportMode>("car");
-  const [carStatus, setCarStatus] = useState<CarStatus>("idle");
+  const [roadStatus, setRoadStatus] = useState<RoadStatus>("idle");
   const [manualLegs, setManualLegs] = useState<ManualLegDraft[]>([{ origin: "", destination: "", mode: "car" }]);
   const [estimate, setEstimate] = useState<RouteEstimate | null>(null);
   const [estimating, setEstimating] = useState(false);
@@ -152,24 +156,24 @@ export function LogTripScreen({ navigation }: Props) {
 
   useEffect(() => {
     if (logMethod !== "automatic" || !bothEnds) {
-      setCarStatus("idle");
+      setRoadStatus("idle");
       return;
     }
 
     let cancelled = false;
-    setCarStatus("checking");
+    setRoadStatus("checking");
     const handle = setTimeout(async () => {
       try {
         await api.estimate({ origin: origin.trim(), destination: destination.trim(), mode: "car" });
-        if (!cancelled) setCarStatus("available");
+        if (!cancelled) setRoadStatus("available");
       } catch (err) {
         if (cancelled) return;
         if (isNoRoadError(err)) {
-          setCarStatus("unavailable");
-          setMode((current) => (current === "car" ? "plane" : current));
-          setEstimate((current) => (current?.mode === "car" ? null : current));
+          setRoadStatus("unavailable");
+          setMode((current) => (isRoadMode(current) ? "plane" : current));
+          setEstimate((current) => (current && isRoadMode(current.mode) ? null : current));
         } else {
-          setCarStatus("idle");
+          setRoadStatus("idle");
         }
       }
     }, 650);
@@ -188,9 +192,9 @@ export function LogTripScreen({ navigation }: Props) {
       setEstimating(false);
       return;
     }
-    if (mode === "car" && carStatus === "unavailable") {
+    if (isRoadMode(mode) && roadStatus === "unavailable") {
       setEstimate(null);
-      setEstimateError("Car is unavailable because these locations are not connected by a drivable road route.");
+      setEstimateError("Car and electric car are unavailable because these locations are not connected by a drivable road route.");
       setEstimating(false);
       return;
     }
@@ -221,7 +225,7 @@ export function LogTripScreen({ navigation }: Props) {
       cancelled = true;
       clearTimeout(handle);
     };
-  }, [origin, destination, mode, bothEnds, carStatus, logMethod]);
+  }, [origin, destination, mode, bothEnds, roadStatus, logMethod]);
 
   const compare = useMemo(
     () => comparisonCopy(
@@ -301,7 +305,9 @@ export function LogTripScreen({ navigation }: Props) {
           provider: result.provider,
           summary: draft.mode === "plane"
             ? `Fly ${shortLabel(result.origin.label)} → ${shortLabel(result.destination.label)}`
-            : `Drive ${shortLabel(result.origin.label)} → ${shortLabel(result.destination.label)}`,
+            : draft.mode === "ev"
+              ? `Electric drive ${shortLabel(result.origin.label)} → ${shortLabel(result.destination.label)}`
+              : `Drive ${shortLabel(result.origin.label)} → ${shortLabel(result.destination.label)}`,
         };
         routedLegs.push(leg);
         totalDistanceKm += result.distanceKm;
@@ -311,7 +317,11 @@ export function LogTripScreen({ navigation }: Props) {
 
       const first = routedLegs[0];
       const last = routedLegs[routedLegs.length - 1];
-      const overallMode: TransportMode = routedLegs.some((leg) => leg.mode === "plane") ? "plane" : "car";
+      const overallMode: TransportMode = routedLegs.some((leg) => leg.mode === "plane")
+        ? "plane"
+        : routedLegs.every((leg) => leg.mode === "ev")
+          ? "ev"
+          : "car";
       const effectiveFactor = totalDistanceKm > 0 ? (totalCo2eKg * 1000) / totalDistanceKm : 0;
 
       setEstimate({
@@ -384,7 +394,7 @@ export function LogTripScreen({ navigation }: Props) {
             <Muted>
               {logMethod === "automatic"
                 ? "Enter the trip endpoints and Luma will build the road / airport / flight itinerary for you."
-                : "Already know the itinerary? Add each drive or flight leg yourself; Luma will only calculate it."}
+                : "Already know the itinerary? Add each drive, electric drive, or flight leg yourself; Luma will only calculate it."}
             </Muted>
           </View>
 
@@ -398,16 +408,16 @@ export function LogTripScreen({ navigation }: Props) {
                 {MODES.map((m) => (
                   <Chip
                     key={m}
-                    label={m[0].toUpperCase() + m.slice(1)}
+                    label={modeLabel(m)}
                     selected={mode === m}
                     tone={m}
-                    disabled={m === "car" && carStatus === "unavailable"}
+                    disabled={isRoadMode(m) && roadStatus === "unavailable"}
                     onPress={() => setMode(m)}
                   />
                 ))}
               </View>
-              {carStatus === "checking" && bothEnds ? <Text style={styles.modeHint}>Checking whether a road route exists…</Text> : null}
-              {carStatus === "unavailable" ? <Text style={styles.modeUnavailable}>Car unavailable · no continuous drivable route between these locations.</Text> : null}
+              {roadStatus === "checking" && bothEnds ? <Text style={styles.modeHint}>Checking whether a road route exists…</Text> : null}
+              {roadStatus === "unavailable" ? <Text style={styles.modeUnavailable}>Car and electric car unavailable · no continuous drivable route between these locations.</Text> : null}
 
               {!bothEnds ? (
                 <View style={styles.hold}>
@@ -429,7 +439,7 @@ export function LogTripScreen({ navigation }: Props) {
 
                   <View style={styles.modes}>
                     {MODES.map((m) => (
-                      <Chip key={m} label={m === "car" ? "Car" : "Plane"} selected={leg.mode === m} tone={m} onPress={() => updateManualLeg(index, { mode: m })} />
+                      <Chip key={m} label={modeLabel(m)} selected={leg.mode === m} tone={m} onPress={() => updateManualLeg(index, { mode: m })} />
                     ))}
                   </View>
 
