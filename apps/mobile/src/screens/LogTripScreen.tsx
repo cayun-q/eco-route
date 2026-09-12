@@ -140,13 +140,20 @@ export function LogTripScreen({ navigation }: Props) {
         });
         if (!cancelled) setEstimate(result);
       } catch (err) {
-        try {
-          const fallback = offlineEstimate(origin.trim(), destination.trim(), mode, factors);
-          if (!cancelled) setEstimate(fallback);
-        } catch {
+        if (mode === "plane") {
           if (!cancelled) {
             setEstimate(null);
-            setEstimateError(err instanceof Error ? err.message : "Could not preview this route.");
+            setEstimateError(err instanceof Error ? err.message : "Could not build an airport itinerary.");
+          }
+        } else {
+          try {
+            const fallback = offlineEstimate(origin.trim(), destination.trim(), mode, factors);
+            if (!cancelled) setEstimate(fallback);
+          } catch {
+            if (!cancelled) {
+              setEstimate(null);
+              setEstimateError(err instanceof Error ? err.message : "Could not preview this route.");
+            }
           }
         }
       } finally {
@@ -235,7 +242,7 @@ export function LogTripScreen({ navigation }: Props) {
           {bothEnds && estimating && !estimate ? (
             <View style={styles.hold}>
               <ActivityIndicator color={colors.accent} />
-              <Text style={styles.holdBody}>Plotting the route…</Text>
+              <Text style={styles.holdBody}>{mode === "plane" ? "Finding airports and flight connections…" : "Plotting the route…"}</Text>
             </View>
           ) : null}
 
@@ -245,8 +252,9 @@ export function LogTripScreen({ navigation }: Props) {
             <View style={styles.preview}>
               <MapPreview estimate={estimate} />
               <Text style={styles.factor}>
-                {estimate.factor.gPerKm} g/km · {estimate.factor.source}
-                {estimate.offline ? " · offline cache" : ` · ${estimate.provider}`}
+                {estimate.legs?.length
+                  ? `Multimodal estimate · airport network + road routing`
+                  : `${estimate.factor.gPerKm} g/km · ${estimate.factor.source}${estimate.offline ? " · offline cache" : ` · ${estimate.provider}`}`}
               </Text>
               {compare ? <Text style={styles.compare}>{compare}</Text> : null}
             </View>
