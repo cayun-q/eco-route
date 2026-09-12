@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { factorForMode, kgFromDistance } from "./emissions";
+import { calculateComparativeEcoScores } from "./ecoScore";
 import { decodePolyline, haversineKm, mockRoute } from "./geo";
 import type { EmissionFactor } from "./types";
 
@@ -22,6 +23,17 @@ test("factorForMode reads the table row", () => {
   ];
   assert.equal(factorForMode(table, "car").gPerKm, 164.54);
   assert.equal(factorForMode(table, "plane").gPerKm, 245.87);
+});
+
+test("comparative Eco-Scores stay spread out on long trips", () => {
+  const scores = calculateComparativeEcoScores([
+    { key: "ev", co2eKg: 45 },
+    { key: "car", co2eKg: 171 },
+    { key: "plane", co2eKg: 246 },
+  ]);
+  assert.equal(scores.ev, 100);
+  assert.equal(scores.plane, 30);
+  assert.ok(scores.car > 30 && scores.car < 100);
 });
 
 test("haversine Portland to Seattle is ~233 km", () => {
