@@ -4,19 +4,18 @@ Multi-leg, multi-modal travel emissions planner. Expo mobile + Express + Postgre
 
 One trip is an ordered list of **legs**. Each leg has an origin, destination, and mode (`car` | `plane` | `train`). Total CO₂e is the **sum of legs**, using a DESNZ/DEFRA 2024 factor table in Postgres — never a hardcoded g/km.
 
-## Multi-leg example
+## Log a trip (map after OD, auto legs)
 
-Drive to the airport, fly, drive onward:
+One origin, one destination, one mode. No Add/Remove leg cards.
 
-1. Type **San Francisco** in origin (typeahead after 2 characters) → pick the city.
-2. Destination **SFO** · mode **car**.
-3. **Add leg** — origin autofills to SFO. Change mode to **plane**, destination **JFK**.
-4. **Add leg** — origin autofills to JFK. Mode **car**, destination **Brooklyn**.
-5. Or tap **Flight with drives** to scaffold the empty car → plane → car cards first.
+1. Typeahead origin and destination (Nominatim + gazetteer, streets and cities).
+2. The map draws only after **both** ends are set.
+3. The client **auto-builds** `legs[]` for estimate/save:
+   - **Car / train** → one hop.
+   - **Plane** → `car → plane → car` when a city sits off a nearby airport (e.g. San Francisco → Brooklyn). Airport-to-airport stays a single plane hop.
+4. Multi-segment map uses mode colors (car `#1F6FEB`, plane `#C2410C`, train `#6D28D9`). Drives sit flat on the ground plane; the flight is a slight great-circle bow — almost flat, not a chord.
 
-The map appears once any leg has both ends. Each segment is stroked in its mode color (car `#6E7340`, plane `#A65D3F`, train `#3D5560`). Plane legs are a great-circle arc, not a straight chord. A sticky **Total CO₂e** sits under the map; the breakdown lists `A → B`, a mode chip, and that leg’s kg.
-
-Single-leg still works: leave the default one empty card, pick train, London St Pancras → Paris Gare du Nord.
+Per-auto-leg CO₂ plus a sticky total. Not an itinerary editor.
 
 ## Autofill / geocode
 
@@ -33,7 +32,9 @@ POST /api/geocode/suggest   { "q": "1 Market St" }
 
 Nominatim `limit≥5` (streets + cities), merged with the gazetteer. Selecting a hit stores **label + lat/lng** (and optional **iata** on airports) and shows the human label. If `MAPBOX_TOKEN` / `MAPBOX_ACCESS_TOKEN` or `GOOGLE_MAPS_API_KEY` is set, those providers are preferred; otherwise Nominatim.
 
-**Plane legs** use an airport picker seam (`GET /api/airports/suggest`) shaped as `{ label, lat, lng, iata? }` so an OpenFlights IATA snapshot can drop in later. Geometry stays a great-circle arc. Car/train stay on Nominatim. A later connect-check will **hard-block** suggest/estimate for plane OD pairs missing from that snapshot — not enforced this pass.
+**Plane legs** use an airport picker seam (`GET /api/airports/suggest`) shaped as `{ label, lat, lng, iata? }` so an OpenFlights IATA snapshot can drop in later. Geometry stays a slight great-circle bow. Car/train stay on Nominatim.
+
+Later OpenFlights PR (not this pass): connect-check is a **hard block** — no suggest and no estimate for plane OD pairs that are not in the snapshot. Multi-leg + Nominatim typeahead ship without that gate.
 
 Car/train geometry uses OSRM when it answers; otherwise a mock road. Planes stay great-circle.
 
@@ -51,15 +52,13 @@ Car/train geometry uses OSRM when it answers; otherwise a mock road. Planes stay
 | `GET` | `/places?q=` | gazetteer only |
 | `GET` | `/health` | API + Postgres check |
 
-A place is `{ placeId }` or `{ label, lat, lng }`. Adding a leg copies the previous destination into the new origin (editable).
+A place is `{ placeId }` or `{ label, lat, lng }`. The client auto-builds legs from one origin, one destination, and a mode.
 
 ## Mobile (eco-rough)
 
-- Vertical paper cards (radius 8, 1px line, hard shadow), mode chips + origin + destination.
-- Muted connector between cards. **Add leg** is a ghost button. Remove on leg 2+.
-- Default = one empty leg. Optional **Flight with drives** preset.
-- Map only when ≥1 complete leg. Sticky total CO₂ near the map.
-- Home / results / trip detail: `A → B`, mode chip, CO₂; total prominent, not glossy.
+- Single origin + destination form, vivid mode chips, forest accent CTA.
+- Map only after both ends are set. Car/train: flat ground polylines. Plane: slight great-circle bow.
+- Sticky total CO₂ plus a read-only per-auto-leg breakdown — not an itinerary editor.
 - Offline queue keeps the full multi-leg payload if save fails.
 
 ## Run locally
@@ -92,12 +91,7 @@ Then visit `http://127.0.0.1:47832`.
 
 ## Theme
 
-| Token | Value |
-| --- | --- |
-| paper | `#F2EEE4` |
-| moss | `#4A6741` |
-| car / plane / train | `#6E7340` / `#A65D3F` / `#3D5560` |
-| cards | radius 8, 1px line, 4px hard shadow |
+Forest eco-rough (PR #1 tones): bg `#F3F6F1`, surface `#FFFFFF`, accent `#1B7A4E`, ink `#14241C`. Mode colors: car `#1F6FEB`, plane `#C2410C`, train `#6D28D9`. Cards: radius 8, 1px line, hard shadow — no glass.
 
 ## Factors
 

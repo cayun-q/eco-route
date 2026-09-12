@@ -47,44 +47,47 @@ export function interpolateGreatCircle(a: LatLng, b: LatLng, t: number): LatLng 
   };
 }
 
-function offsetPoint(point: LatLng, bearingRad: number, km: number): LatLng {
-  const ang = km / EARTH_KM;
-  const lat1 = toRad(point.lat);
-  const lon1 = toRad(point.lng);
-  const lat2 = Math.asin(
-    Math.sin(lat1) * Math.cos(ang) + Math.cos(lat1) * Math.sin(ang) * Math.cos(bearingRad),
-  );
-  const lon2 =
-    lon1 +
-    Math.atan2(
-      Math.sin(bearingRad) * Math.sin(ang) * Math.cos(lat1),
-      Math.cos(ang) - Math.sin(lat1) * Math.sin(lat2),
-    );
-  return { lat: toDeg(lat2), lng: toDeg(lon2) };
-}
-
-/** Plane geometry is always a great-circle soft arc (not a road chord). */
+/**
+ * Plane: medium visual bow — great-circle base plus a sine lift of ~15% of
+ * span (DesignBridge lock: 12–18%). Distinct from flat car/train; not a rainbow.
+ */
 export function greatCircleArc(origin: LatLng, destination: LatLng): LatLng[] {
   const distance = haversineKm(origin, destination);
   const steps = Math.max(16, Math.min(48, Math.round(distance / 50) + 16));
+  // Mid bow height ≈ 15% of span, converted km → degrees (~111 km/°).
+  const bowDeg = (distance * 0.15) / 111;
+  const dLat = destination.lat - origin.lat;
+  const dLng = destination.lng - origin.lng;
+  const len = Math.hypot(dLat, dLng) || 1;
+  // Perpendicular in the map plane (left of travel).
+  const pLat = -dLng / len;
+  const pLng = dLat / len;
   const points: LatLng[] = [];
   for (let i = 0; i <= steps; i += 1) {
-    points.push(interpolateGreatCircle(origin, destination, i / steps));
+    const t = i / steps;
+    const gc = interpolateGreatCircle(origin, destination, t);
+    const lift = Math.sin(Math.PI * t) * bowDeg;
+    points.push({
+      lat: gc.lat + pLat * lift,
+      lng: gc.lng + pLng * lift,
+    });
   }
   points[0] = origin;
   points[points.length - 1] = destination;
   return points;
 }
 
-export function mockRoad(origin: LatLng, destination: LatLng, mode: "car" | "train"): LatLng[] {
+/** Car/train fallback: flat 2D chord on the ground plane — no arc lift. */
+export function mockRoad(origin: LatLng, destination: LatLng, _mode: "car" | "train"): LatLng[] {
   const distance = haversineKm(origin, destination);
-  const steps = Math.max(8, Math.min(28, Math.round(distance / 80) + 8));
+  const steps = Math.max(2, Math.min(12, Math.round(distance / 120) + 2));
   const points: LatLng[] = [];
   for (let i = 0; i <= steps; i += 1) {
     const t = i / steps;
-    const bulge = Math.sin(Math.PI * t) * Math.min(18, distance * 0.04);
-    const p = interpolateGreatCircle(origin, destination, t);
-    points.push(offsetPoint(p, mode === "train" ? Math.PI / 2 : -Math.PI / 2, bulge));
+    points.push({
+      lat: origin.lat + (destination.lat - origin.lat) * t,
+      lng: origin.lng + (destination.lng - origin.lng) * t,
+    });
   }
   points[0] = origin;
   points[points.length - 1] = destination;

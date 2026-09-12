@@ -27,7 +27,7 @@ export function suggestPlaces(q: string, mode?: TravelMode): Promise<{ places: P
 }
 
 export function suggestAirports(q: string): Promise<{ places: Place[] }> {
-  // TODO(openflights): this hits the IATA picker contract. Connect-check will HARD BLOCK later.
+  // TODO(openflights): IATA picker. Later HARD BLOCK — no suggest for OD not in snapshot.
   return request(`/api/airports/suggest?q=${encodeURIComponent(q)}`);
 }
 

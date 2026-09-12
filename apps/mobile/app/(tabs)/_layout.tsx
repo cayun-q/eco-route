@@ -8,7 +8,7 @@ function TabLabel({ label, focused }: { label: string; focused: boolean }) {
       style={{
         fontFamily: "SpaceMono",
         fontSize: 11,
-        color: focused ? colors.moss : colors.inkMuted,
+        color: focused ? colors.accent : colors.muted,
         letterSpacing: 0.5,
       }}
     >
@@ -21,20 +21,20 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: colors.paper },
+        headerStyle: { backgroundColor: colors.bg },
         headerTintColor: colors.ink,
         headerTitleStyle: { fontFamily: "SpaceMono", fontSize: 16 },
         headerShadowVisible: false,
         tabBarStyle: {
-          backgroundColor: colors.paper,
+          backgroundColor: colors.bg,
           borderTopColor: colors.ink,
           borderTopWidth: 1.5,
           height: 64,
           paddingBottom: 10,
           paddingTop: 8,
         },
-        tabBarActiveTintColor: colors.moss,
-        tabBarInactiveTintColor: colors.inkMuted,
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.muted,
       }}
     >
       <Tabs.Screen

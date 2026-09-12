@@ -18,26 +18,35 @@ export function ModeChip({
       onPress={onPress}
       style={[
         styles.chip,
-        { borderColor: color, backgroundColor: selected ? color : colors.paper },
+        {
+          borderColor: color,
+          backgroundColor: selected ? color : colors.surface,
+        },
       ]}
     >
-      <Text style={[styles.text, { color: selected ? colors.paper : color }]}>
-        {mode}
-      </Text>
+      <Text style={[styles.text, { color: selected ? colors.surface : color }]}>{mode}</Text>
     </Pressable>
   );
 }
 
-export function StatChip({ label, value, color = colors.ink }: { label: string; value: string; color?: string }) {
+export function StatChip({
+  label,
+  value,
+  color = colors.ink,
+}: {
+  label: string;
+  value: string;
+  color?: string;
+}) {
   return (
     <Pressable style={[styles.stat, { borderColor: color }]}>
       <Text style={[styles.statLabel, { color }]}>{label}</Text>
-      <Text style={[styles.statValue, { color }]}>{value}</Text>
+      <Text style={[styles.statValue, { color: colors.ink }]}>{value}</Text>
     </Pressable>
   );
 }
 
-export function Co2Chip({ kg, color = colors.moss }: { kg: number; color?: string }) {
+export function Co2Chip({ kg, color = colors.accent }: { kg: number; color?: string }) {
   return <StatChip label="CO₂e" value={formatKg(kg)} color={color} />;
 }
 
@@ -45,20 +54,21 @@ const styles = StyleSheet.create({
   chip: {
     borderWidth: 1,
     borderRadius: radius,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
   },
   text: {
     fontFamily: "SpaceMono",
     fontSize: 12,
     textTransform: "uppercase",
+    fontWeight: "700",
   },
   stat: {
     borderWidth: 1,
     borderRadius: radius,
     paddingHorizontal: 10,
     paddingVertical: 7,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
   statLabel: {
     fontFamily: "SpaceMono",
@@ -68,7 +78,8 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontFamily: "SpaceMono",
-    fontSize: 14,
+    fontSize: 16,
     marginTop: 2,
+    fontWeight: "700",
   },
 });

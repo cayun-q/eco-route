@@ -39,10 +39,8 @@ export function RouteMap({
   if (complete.length === 0) {
     return (
       <View style={[styles.empty, { height }]}>
-        <Text style={styles.emptyTitle}>Map waits for both ends</Text>
-        <Text style={styles.emptyCopy}>
-          Set origin and destination on a leg. Empty legs stay off the map.
-        </Text>
+        <Text style={styles.emptyTitle}>Map’s warming up</Text>
+        <Text style={styles.emptyCopy}>Drop in both ends and we’ll sketch the hop.</Text>
       </View>
     );
   }
@@ -61,7 +59,7 @@ export function RouteMap({
   return (
     <View style={[styles.frame, { height }]}>
       <Svg width="100%" height="100%" viewBox={`0 0 ${width} ${svgH}`}>
-        <Rect x={0} y={0} width={width} height={svgH} fill={colors.paperDeep} />
+        <Rect x={0} y={0} width={width} height={svgH} fill={colors.surfaceMuted} />
         {Array.from({ length: 8 }).map((_, i) => (
           <Line
             key={`h-${i}`}
@@ -95,7 +93,7 @@ export function RouteMap({
               points={pts}
               fill="none"
               stroke={modeColor[leg.mode]}
-              strokeWidth={leg.mode === "plane" ? 2.8 : 2.4}
+              strokeWidth={3.6}
               strokeLinejoin="round"
               strokeLinecap="round"
             />
@@ -151,7 +149,7 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     borderRadius: 8,
     overflow: "hidden",
-    backgroundColor: colors.paperDeep,
+    backgroundColor: colors.surfaceMuted,
   },
   empty: {
     borderWidth: 1.5,
@@ -161,7 +159,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
-    backgroundColor: colors.paperDeep,
+    backgroundColor: colors.surfaceMuted,
   },
   emptyTitle: {
     fontFamily: "SpaceMono",
@@ -170,7 +168,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   emptyCopy: {
-    color: colors.inkMuted,
+    color: colors.muted,
     textAlign: "center",
     fontSize: 14,
     maxWidth: 320,

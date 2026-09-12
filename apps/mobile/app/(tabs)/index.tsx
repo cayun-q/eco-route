@@ -87,7 +87,7 @@ export default function HomeScreen() {
         <Card>
           <Text style={styles.emptyTitle}>No trips inked yet</Text>
           <Text style={styles.muted}>
-            Start with a single train hop, or the Flight with drives preset: car → plane → car.
+            Pick origin and destination. Plane trips auto-split into drive–fly–drive when airports sit nearby.
           </Text>
         </Card>
       ) : null}
@@ -111,11 +111,11 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.paper },
+  page: { flex: 1, backgroundColor: colors.bg },
   content: { padding: 16, gap: 14, paddingBottom: 40, maxWidth: 720, width: "100%", alignSelf: "center" },
   kicker: {
     fontFamily: "SpaceMono",
-    color: colors.moss,
+    color: colors.accent,
     letterSpacing: 1.4,
     fontSize: 11,
     textTransform: "uppercase",
@@ -124,26 +124,26 @@ const styles = StyleSheet.create({
   cardEyebrow: {
     fontFamily: "SpaceMono",
     fontSize: 11,
-    color: colors.inkMuted,
+    color: colors.muted,
     textTransform: "uppercase",
   },
   hero: { fontFamily: "SpaceMono", fontSize: 36, color: colors.ink, marginVertical: 4 },
-  heroSub: { color: colors.inkMuted, marginBottom: 12 },
+  heroSub: { color: colors.muted, marginBottom: 12 },
   section: {
     fontFamily: "SpaceMono",
     fontSize: 12,
     letterSpacing: 1,
-    color: colors.mossInk,
+    color: colors.accentText,
     textTransform: "uppercase",
     marginTop: 8,
   },
   tripTitle: { fontSize: 17, color: colors.ink, fontWeight: "600" },
-  tripModes: { fontFamily: "SpaceMono", color: colors.moss, marginTop: 4, fontSize: 12 },
-  tripMeta: { fontFamily: "SpaceMono", color: colors.inkMuted, fontSize: 11, marginTop: 10 },
+  tripModes: { fontFamily: "SpaceMono", color: colors.accent, marginTop: 4, fontSize: 12 },
+  tripMeta: { fontFamily: "SpaceMono", color: colors.muted, fontSize: 11, marginTop: 10 },
   emptyTitle: { fontSize: 16, color: colors.ink, marginBottom: 6 },
-  muted: { color: colors.inkMuted, lineHeight: 20 },
+  muted: { color: colors.muted, lineHeight: 20 },
   error: { color: colors.danger, marginBottom: 6 },
   warn: { backgroundColor: colors.warnSoft },
   warnTitle: { fontFamily: "SpaceMono", color: colors.plane, marginBottom: 6 },
-  warnCopy: { color: colors.inkMuted, marginBottom: 10 },
+  warnCopy: { color: colors.muted, marginBottom: 10 },
 });

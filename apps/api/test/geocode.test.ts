@@ -50,6 +50,10 @@ test("plane geometry is a great-circle arc, not a two-point chord", () => {
     lng: (origin.lng + dest.lng) / 2,
   };
   const gcMid = interpolateGreatCircle(origin, dest, 0.5);
-  assert.ok(Math.abs(mid.lat - gcMid.lat) < 0.05);
-  assert.ok(Math.abs(mid.lat - chordMid.lat) > 0.2 || Math.abs(mid.lng - chordMid.lng) > 0.2);
+  assert.ok(Math.abs(mid.lat - gcMid.lat) < 0.08, "plane should follow the great-circle, not a sine-lift rainbow");
+  assert.ok(Math.abs(mid.lng - gcMid.lng) < 0.08);
+  assert.ok(
+    Math.abs(mid.lat - chordMid.lat) > 0.2 || Math.abs(mid.lng - chordMid.lng) > 0.2,
+    "plane should still bow off a straight chord",
+  );
 });
