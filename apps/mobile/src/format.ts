@@ -1,6 +1,7 @@
 import type { TransportMode } from "@carbonroute/shared";
 
 export type MeasurementSystem = "metric" | "imperial";
+export type DisplayPrecision = "simple" | "detailed";
 
 const ROAD_WORDS = /\b(?:street|st|road|rd|avenue|ave|lane|ln|drive|dr|boulevard|blvd|court|ct|circle|cir|way|highway|hwy|parkway|pkwy|place|pl|terrace|ter|trail|trl)\.?$/i;
 const KM_TO_MILES = 0.6213711922;
@@ -8,9 +9,14 @@ const KG_TO_POUNDS = 2.2046226218;
 const GRAMS_PER_POUND = 453.59237;
 const KM_PER_MILE = 1.609344;
 let defaultMeasurementSystem: MeasurementSystem = "metric";
+let defaultDisplayPrecision: DisplayPrecision = "simple";
 
 export function setDefaultMeasurementSystem(system: MeasurementSystem): void {
   defaultMeasurementSystem = system;
+}
+
+export function setDefaultDisplayPrecision(precision: DisplayPrecision): void {
+  defaultDisplayPrecision = precision;
 }
 
 export function placeDisplayLabel(label: string): string {
@@ -35,29 +41,49 @@ export function placeDisplayLabel(label: string): string {
   return parts[0];
 }
 
-function formatMass(value: number, unit: "kg" | "lb"): string {
-  if (value >= 100) return `${Math.round(value)} ${unit}`;
-  if (value >= 10) return `${value.toFixed(1)} ${unit}`;
+function formatMass(value: number, unit: "kg" | "lb", precision: DisplayPrecision): string {
+  if (precision === "simple") {
+    if (value < 10) return `${value.toFixed(1)} ${unit}`;
+    return `${Math.round(value)} ${unit}`;
+  }
+  if (value >= 100) return `${value.toFixed(1)} ${unit}`;
   return `${value.toFixed(2)} ${unit}`;
 }
 
-export function formatKg(kg: number, system: MeasurementSystem = defaultMeasurementSystem): string {
-  return system === "imperial" ? formatMass(kg * KG_TO_POUNDS, "lb") : formatMass(kg, "kg");
+export function formatKg(
+  kg: number,
+  system: MeasurementSystem = defaultMeasurementSystem,
+  precision: DisplayPrecision = defaultDisplayPrecision,
+): string {
+  return system === "imperial"
+    ? formatMass(kg * KG_TO_POUNDS, "lb", precision)
+    : formatMass(kg, "kg", precision);
 }
 
-export function formatKm(km: number, system: MeasurementSystem = defaultMeasurementSystem): string {
+export function formatKm(
+  km: number,
+  system: MeasurementSystem = defaultMeasurementSystem,
+  precision: DisplayPrecision = defaultDisplayPrecision,
+): string {
   const value = system === "imperial" ? km * KM_TO_MILES : km;
   const unit = system === "imperial" ? "mi" : "km";
-  if (value >= 100) return `${Math.round(value)} ${unit}`;
+  if (precision === "simple") {
+    if (value < 10) return `${value.toFixed(1)} ${unit}`;
+    return `${Math.round(value)} ${unit}`;
+  }
   return `${value.toFixed(1)} ${unit}`;
 }
 
-export function formatFactor(gPerKm: number, system: MeasurementSystem = defaultMeasurementSystem): string {
+export function formatFactor(
+  gPerKm: number,
+  system: MeasurementSystem = defaultMeasurementSystem,
+  precision: DisplayPrecision = defaultDisplayPrecision,
+): string {
   if (system === "imperial") {
     const lbPerMile = (gPerKm * KM_PER_MILE) / GRAMS_PER_POUND;
-    return `${lbPerMile.toFixed(3)} lb/mi`;
+    return `${lbPerMile.toFixed(precision === "simple" ? 2 : 3)} lb/mi`;
   }
-  return `${gPerKm} g/km`;
+  return `${precision === "simple" ? Math.round(gPerKm) : gPerKm.toFixed(1)} g/km`;
 }
 
 export function formatDuration(min: number): string {
@@ -82,10 +108,11 @@ export function modeLabel(mode: TransportMode): string {
 export function vsDrivingCopy(
   vsDrivingKg: number | null | undefined,
   system: MeasurementSystem = defaultMeasurementSystem,
+  precision: DisplayPrecision = defaultDisplayPrecision,
 ): string | null {
   if (vsDrivingKg == null) return null;
   const abs = Math.abs(vsDrivingKg);
-  const amount = formatKg(abs, system);
+  const amount = formatKg(abs, system, precision);
   if (vsDrivingKg < 0) return `${amount} less than the same trip by car`;
   if (vsDrivingKg > 0) return `${amount} more than driving`;
   return "Same CO₂e as driving this distance";
