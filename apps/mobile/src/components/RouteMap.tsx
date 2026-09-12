@@ -1,6 +1,6 @@
 import { StyleSheet } from "react-native";
 import { WebView } from "react-native-webview";
-import type { Place, TransportMode } from "@carbonroute/shared";
+import type { Place, RouteLeg, TransportMode } from "@carbonroute/shared";
 import { colors } from "../theme";
 
 type Props = {
@@ -8,15 +8,22 @@ type Props = {
   destination: Place;
   polyline: [number, number][];
   mode: TransportMode;
+  legs?: RouteLeg[];
 };
 
 const CAR_ROUTE = "#2563EB";
 const PLANE_ROUTE = "#D97706";
 
-function leafletHtml(origin: Place, destination: Place, polyline: [number, number][], mode: TransportMode): string {
-  const routeColor = mode === "car" ? CAR_ROUTE : PLANE_ROUTE;
-  const routeWeight = mode === "car" ? 5 : 4;
-  const smoothFactor = mode === "plane" ? 0.35 : 1;
+function leafletHtml(
+  origin: Place,
+  destination: Place,
+  polyline: [number, number][],
+  mode: TransportMode,
+  legs?: RouteLeg[],
+): string {
+  const drawLegs = legs?.length
+    ? legs.map((leg) => ({ mode: leg.mode, polyline: leg.polyline }))
+    : [{ mode, polyline }];
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -38,35 +45,42 @@ function leafletHtml(origin: Place, destination: Place, polyline: [number, numbe
     const origin = ${JSON.stringify(origin)};
     const destination = ${JSON.stringify(destination)};
     const polyline = ${JSON.stringify(polyline)};
-    const map = L.map('map', { zoomControl: true, attributionControl: true });
+    const legs = ${JSON.stringify(drawLegs)};
+    const map = L.map('map', { zoomControl: true, attributionControl: true, preferCanvas: true });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap',
-      maxZoom: 18
+      maxZoom: 18,
+      updateWhenIdle: true,
+      updateWhenZooming: false
     }).addTo(map);
-    const line = L.polyline(polyline, {
-      color: '${routeColor}',
-      weight: ${routeWeight},
-      opacity: 0.94,
-      smoothFactor: ${smoothFactor},
-      lineCap: 'round',
-      lineJoin: 'round'
-    }).addTo(map);
+    for (const leg of legs) {
+      L.polyline(leg.polyline, {
+        color: leg.mode === 'car' ? '${CAR_ROUTE}' : '${PLANE_ROUTE}',
+        weight: leg.mode === 'car' ? 5 : 4,
+        opacity: 0.94,
+        smoothFactor: leg.mode === 'plane' ? 0.3 : 1,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(map);
+    }
+    const boundsLine = L.polyline(polyline, { opacity: 0, weight: 0 }).addTo(map);
     const iconA = L.divIcon({ className: '', html: '<div class="pin pin-a"></div>', iconSize: [14, 14], iconAnchor: [7, 7] });
     const iconB = L.divIcon({ className: '', html: '<div class="pin pin-b"></div>', iconSize: [14, 14], iconAnchor: [7, 7] });
     L.marker([origin.lat, origin.lng], { icon: iconA, title: origin.label }).addTo(map);
     L.marker([destination.lat, destination.lng], { icon: iconB, title: destination.label }).addTo(map);
-    map.fitBounds(line.getBounds(), { padding: [28, 28] });
+    map.fitBounds(boundsLine.getBounds(), { padding: [28, 28] });
+    map.removeLayer(boundsLine);
   </script>
 </body>
 </html>`;
 }
 
-export function RouteMap({ origin, destination, polyline, mode }: Props) {
+export function RouteMap({ origin, destination, polyline, mode, legs }: Props) {
   if (!polyline.length) return null;
   return (
     <WebView
       originWhitelist={["*"]}
-      source={{ html: leafletHtml(origin, destination, polyline, mode) }}
+      source={{ html: leafletHtml(origin, destination, polyline, mode, legs) }}
       style={styles.fill}
     />
   );
