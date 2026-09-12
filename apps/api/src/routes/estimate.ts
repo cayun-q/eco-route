@@ -17,7 +17,7 @@ estimateRouter.post("/", async (req, res, next) => {
   try {
     const parsed = bodySchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ error: "origin, destination, and mode (car|plane|train) are required." });
+      res.status(400).json({ error: "origin, destination, and mode (car|plane) are required." });
       return;
     }
     const { origin: originQ, destination: destQ, mode } = parsed.data;
