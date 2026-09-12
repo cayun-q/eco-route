@@ -3,19 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Leaflet Map</title>
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-      crossorigin=""
-    />
+    <title>Eco-Score Calculator</title>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <aside id="panel" aria-live="polite">
-      <h1>Route &amp; CO₂</h1>
-      <label class="mode-field" for="transport-mode">
+    <main class="card">
+      <h1>Eco-Score</h1>
+      <p class="lede">
+        Score out of 100 from transport-mode carbon intensity. No map — just the
+        calculation.
+      </p>
+
+      <label class="field" for="transport-mode">
         Transport mode
         <select id="transport-mode">
           <option value="driving-car" selected>Driving (Car)</option>
@@ -24,51 +23,30 @@
           <option value="foot-walking">Walking</option>
         </select>
       </label>
-      <section id="eco-score-card" class="eco-score-card" aria-label="Eco-Score">
-        <div class="eco-score-card__header">
-          <h2>Eco-Score</h2>
-          <p class="eco-score-card__value">
+
+      <section class="score" aria-label="Eco-Score result">
+        <div class="score__row">
+          <span class="score__label">Eco-Score</span>
+          <p class="score__value">
             <span id="eco-score-value">0</span>
-            <span class="eco-score-card__out-of">/ 100</span>
+            <span class="score__out-of">/ 100</span>
           </p>
         </div>
         <div
-          class="eco-score-card__track"
+          class="score__track"
           role="meter"
           aria-valuemin="0"
           aria-valuemax="100"
+          aria-valuenow="0"
           aria-labelledby="eco-score-value"
         >
-          <div id="eco-score-meter" class="eco-score-card__meter"></div>
+          <div id="eco-score-meter" class="score__meter"></div>
         </div>
-        <p class="eco-score-card__hint">
-          Higher score = lower carbon intensity for this mode.
+        <p class="score__meta">
+          Carbon intensity: <strong id="intensity">—</strong>
         </p>
       </section>
-      <p id="status">Click the map to set a start point.</p>
-      <dl id="stats" hidden>
-        <div>
-          <dt>Distance</dt>
-          <dd id="distance">—</dd>
-        </div>
-        <div>
-          <dt>Duration</dt>
-          <dd id="duration">—</dd>
-        </div>
-        <div>
-          <dt>CO₂</dt>
-          <dd id="co2">—</dd>
-        </div>
-      </dl>
-      <p id="error" class="error" hidden></p>
-      <button type="button" id="reset" hidden>Clear route</button>
-    </aside>
-    <div id="map"></div>
-    <script
-      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-      crossorigin=""
-    ></script>
+    </main>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

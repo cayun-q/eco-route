@@ -7,97 +7,103 @@
 html,
 body {
   margin: 0;
-  height: 100%;
+  min-height: 100%;
   font-family: "Segoe UI", system-ui, sans-serif;
-}
-
-#map {
-  width: 100%;
-  height: 100%;
-}
-
-#panel {
-  position: absolute;
-  z-index: 1000;
-  top: 1rem;
-  right: 1rem;
-  width: min(18rem, calc(100vw - 2rem));
-  padding: 1rem 1.1rem;
-  border-radius: 0.75rem;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+  background:
+    radial-gradient(circle at top left, #ccfbf1 0%, transparent 45%),
+    linear-gradient(160deg, #f8fafc 0%, #ecfeff 100%);
   color: #0f172a;
 }
 
-#panel h1 {
-  margin: 0 0 0.4rem;
-  font-size: 1.05rem;
+body {
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
 }
 
-.mode-field {
+.card {
+  width: min(24rem, 100%);
+  padding: 1.4rem 1.5rem 1.5rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #99f6e4;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+}
+
+h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.4rem;
+}
+
+.lede {
+  margin: 0 0 1.1rem;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: #475569;
+}
+
+.field {
   display: grid;
   gap: 0.35rem;
-  margin: 0 0 0.75rem;
+  margin: 0 0 1rem;
   font-size: 0.8rem;
   color: #64748b;
 }
 
-.mode-field select {
+.field select {
   width: 100%;
   border: 1px solid #cbd5e1;
-  border-radius: 0.5rem;
-  padding: 0.45rem 0.55rem;
+  border-radius: 0.55rem;
+  padding: 0.55rem 0.65rem;
   background: #fff;
   color: #0f172a;
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
 }
 
-.eco-score-card {
-  margin: 0 0 0.85rem;
-  padding: 0.75rem 0.8rem;
-  border-radius: 0.65rem;
-  background: linear-gradient(160deg, #ecfdf5 0%, #f0fdfa 55%, #f8fafc 100%);
+.score {
+  padding: 0.9rem 0.95rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(160deg, #ecfdf5 0%, #f0fdfa 60%, #f8fafc 100%);
   border: 1px solid #99f6e4;
 }
 
-.eco-score-card__header {
+.score__row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
-.eco-score-card h2 {
-  margin: 0;
-  font-size: 0.85rem;
+.score__label {
+  font-size: 0.9rem;
   font-weight: 600;
   color: #0f766e;
 }
 
-.eco-score-card__value {
+.score__value {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: 1.8rem;
   font-weight: 700;
   color: #134e4a;
   line-height: 1;
 }
 
-.eco-score-card__out-of {
-  font-size: 0.75rem;
+.score__out-of {
+  font-size: 0.85rem;
   font-weight: 500;
   color: #5eead4;
 }
 
-.eco-score-card__track {
-  margin-top: 0.55rem;
-  height: 0.45rem;
+.score__track {
+  margin-top: 0.7rem;
+  height: 0.5rem;
   border-radius: 999px;
   background: #ccfbf1;
   overflow: hidden;
 }
 
-.eco-score-card__meter {
+.score__meter {
   height: 100%;
   width: 0%;
   border-radius: inherit;
@@ -105,71 +111,8 @@ body {
   transition: width 0.25s ease;
 }
 
-.eco-score-card__hint {
-  margin: 0.5rem 0 0;
-  font-size: 0.72rem;
-  line-height: 1.35;
+.score__meta {
+  margin: 0.65rem 0 0;
+  font-size: 0.82rem;
   color: #0f766e;
-}
-
-#status {
-  margin: 0;
-  font-size: 0.9rem;
-  line-height: 1.4;
-  color: #334155;
-}
-
-#stats {
-  display: grid;
-  gap: 0.55rem;
-  margin: 0.9rem 0 0;
-}
-
-#stats div {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  font-size: 0.9rem;
-}
-
-#stats dt {
-  margin: 0;
-  color: #64748b;
-}
-
-#stats dd {
-  margin: 0;
-  font-weight: 600;
-}
-
-#error {
-  margin: 0.75rem 0 0;
-  font-size: 0.85rem;
-  color: #b91c1c;
-}
-
-#reset {
-  margin-top: 0.9rem;
-  width: 100%;
-  border: 0;
-  border-radius: 0.5rem;
-  padding: 0.55rem 0.75rem;
-  background: #0f172a;
-  color: #fff;
-  font: inherit;
-  cursor: pointer;
-}
-
-#reset:hover {
-  background: #1e293b;
-}
-
-@media (max-width: 640px) {
-  #panel {
-    top: auto;
-    bottom: 1rem;
-    left: 1rem;
-    right: 1rem;
-    width: auto;
-  }
 }
