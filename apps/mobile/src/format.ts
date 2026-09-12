@@ -1,5 +1,29 @@
 import type { TransportMode } from "@carbonroute/shared";
 
+const ROAD_WORDS = /\b(?:street|st|road|rd|avenue|ave|lane|ln|drive|dr|boulevard|blvd|court|ct|circle|cir|way|highway|hwy|parkway|pkwy|place|pl|terrace|ter|trail|trl)\.?$/i;
+
+export function placeDisplayLabel(label: string): string {
+  const parts = label
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (!parts.length) return label;
+
+  if (/^[A-Z]{3}\s+[—-]/.test(parts[0])) {
+    return parts[1] || parts[0].slice(0, 3);
+  }
+
+  for (const part of parts) {
+    if (/^\d+[A-Za-z-]*$/.test(part)) continue;
+    if (/^\d+\s+/.test(part)) continue;
+    if (ROAD_WORDS.test(part)) continue;
+    return part;
+  }
+
+  return parts[0];
+}
+
 export function formatKg(kg: number): string {
   if (kg >= 100) return `${Math.round(kg)} kg`;
   if (kg >= 10) return `${kg.toFixed(1)} kg`;
