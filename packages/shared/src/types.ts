@@ -18,7 +18,18 @@ export type EmissionFactor = {
   updatedAt?: string;
 };
 
-export type RouteProvider = "haversine" | "mapbox" | "google" | "ors" | "osrm";
+export type RouteProvider = "haversine" | "mapbox" | "google" | "ors" | "osrm" | "openflights";
+
+export type RouteLeg = {
+  mode: TransportMode;
+  origin: Place;
+  destination: Place;
+  distanceKm: number;
+  durationMin: number;
+  polyline: [number, number][];
+  provider: RouteProvider;
+  summary?: string;
+};
 
 export type RouteEstimate = {
   origin: Place;
@@ -27,6 +38,7 @@ export type RouteEstimate = {
   distanceKm: number;
   durationMin: number;
   polyline: [number, number][];
+  legs?: RouteLeg[];
   co2eKg: number;
   factor: EmissionFactor;
   drivingCo2eKg: number | null;
