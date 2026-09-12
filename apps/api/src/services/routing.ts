@@ -112,8 +112,9 @@ export async function routeBetween(
   dest: LatLng,
   mode: TransportMode,
 ): Promise<Routed> {
-  // Air routes are great-circle even when road APIs are configured.
-  if (mode === "plane") {
+  // Air and rail stay on the rough calculator (great-circle + MODE_SPEED_KMH).
+  // Road providers are optional and only apply to car.
+  if (mode === "plane" || mode === "train") {
     return { ...mockRoute(origin, dest, mode), provider: "haversine" };
   }
 

@@ -9,7 +9,8 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "tsx --test src/*.test.ts"
+    "test": "tsx --test src/*.test.ts",
+    "estimate": "tsx src/estimate-cli.ts"
   },
   "devDependencies": {
     "tsx": "^4.20.5"

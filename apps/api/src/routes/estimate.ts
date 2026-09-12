@@ -27,6 +27,10 @@ estimateRouter.post("/", async (req, res, next) => {
     }
 
     const [origin, destination] = await Promise.all([geocode(originQ), geocode(destQ)]);
+    if (origin.lat === destination.lat && origin.lng === destination.lng) {
+      res.status(400).json({ error: "Origin and destination need to be different places." });
+      return;
+    }
     const routed = await routeBetween(origin, destination, mode);
     const emissions = await emissionsFor(mode, routed.distanceKm);
 

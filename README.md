@@ -29,7 +29,7 @@ Leave these blank for mock geocode + haversine / great-circle polylines.
 | `GOOGLE_MAPS_API_KEY` | Google Directions |
 | `ORS_API_KEY` | OpenRouteService |
 
-Plane trips always use a great-circle path. Road providers apply to car and train.
+Plane and **train** trips always use a great-circle / haversine path plus `MODE_SPEED_KMH` (train ≈ 110 km/h, 20 min overhead). That is a rough duration — not a timetable. Road providers apply only to car.
 
 ## Product flow
 
@@ -69,6 +69,23 @@ packages/shared     types, kgFromDistance, haversine, gazetteer
 | GET | `/api/stats` | Totals for Home |
 
 Emissions: `co2eKg = distanceKm * factor.gPerKm / 1000`. The grams-per-km value is loaded from `emission_factors`.
+
+### Rough train estimate
+
+`POST /api/routes/estimate` with `mode: "train"` geocodes both ends (gazetteer, `lat,lng`, or Nominatim) and returns distance, duration, a great-circle polyline, and CO₂e from the train row in `emission_factors`. Mapbox / Google / ORS are not required.
+
+```bash
+curl -s http://127.0.0.1:43124/api/routes/estimate \
+  -H 'Content-Type: application/json' \
+  -d '{"origin":"Portland, OR","destination":"Seattle, WA","mode":"train"}'
+```
+
+Without the API or mobile app, the same calculator runs locally (gazetteer + haversine; CO₂e uses the DESNZ/DEFRA 2024 seed factor unless `G_PER_KM` is set):
+
+```bash
+npm run estimate -- "Portland, OR" "Seattle, WA"
+# optional third arg: car | plane | train (default train)
+```
 
 ## Eco-rough UI
 

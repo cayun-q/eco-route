@@ -12,7 +12,8 @@
     "seed": "npm run seed --workspace=@carbonroute/api",
     "mobile": "npm run start --workspace=@carbonroute/mobile",
     "web": "npm run web --workspace=@carbonroute/mobile",
-    "test": "npm run test --workspace=@carbonroute/shared && npm run test --workspace=@carbonroute/api"
+    "test": "npm run test --workspace=@carbonroute/shared && npm run test --workspace=@carbonroute/api",
+    "estimate": "npm run estimate --workspace=@carbonroute/shared --"
   },
   "engines": {
     "node": ">=20"
