@@ -1,77 +1,66 @@
-export const MODES = ["car", "plane", "train"] as const;
-export type TransportMode = (typeof MODES)[number];
+import type { TravelMode } from "./theme";
 
-export type LatLng = {
+export type Place = {
+  id: string;
+  label: string;
+  kind: "city" | "airport" | "station" | "address";
   lat: number;
   lng: number;
+  region?: string;
+  /** IATA when this is an airport. OpenFlights picker will fill this later. */
+  iata?: string;
 };
 
-export type Place = LatLng & {
-  label: string;
+export type LatLng = { lat: number; lng: number };
+
+export type PlaceRef =
+  | { placeId: string; iata?: string }
+  | { label: string; lat: number; lng: number; iata?: string };
+
+export type LegInput = {
+  mode: TravelMode;
+  origin: PlaceRef;
+  destination: PlaceRef;
 };
 
-export type EmissionFactor = {
-  mode: TransportMode;
-  gPerKm: number;
-  source: string;
-  notes?: string | null;
-  updatedAt?: string;
-};
-
-export type RouteProvider = "haversine" | "mapbox" | "google" | "ors";
-
-export type RouteEstimate = {
+export type EstimatedLeg = {
+  seq: number;
+  mode: TravelMode;
   origin: Place;
   destination: Place;
-  mode: TransportMode;
   distanceKm: number;
   durationMin: number;
-  polyline: [number, number][];
   co2eKg: number;
-  factor: EmissionFactor;
-  drivingCo2eKg: number | null;
-  vsDrivingKg: number | null;
-  provider: RouteProvider;
-  offline?: boolean;
+  kgCo2ePerKm: number;
+  factor: {
+    id: number;
+    activity: string;
+    band: string | null;
+    source: string;
+    year: number;
+  };
+  polyline: LatLng[];
 };
 
-export type Trip = {
-  id: string;
-  originLabel: string;
-  destinationLabel: string;
-  originLat: number;
-  originLng: number;
-  destLat: number;
-  destLng: number;
-  mode: TransportMode;
+export type TripTotals = {
   distanceKm: number;
   durationMin: number;
   co2eKg: number;
-  polyline: [number, number][];
-  factorGPerKm: number;
-  factorSource: string;
-  pending?: boolean;
+};
+
+export type EstimateRequest =
+  | { legs: LegInput[] }
+  | { mode: TravelMode; origin: PlaceRef; destination: PlaceRef };
+
+export type EstimateResponse = {
+  legs: EstimatedLeg[];
+  totals: TripTotals;
+};
+
+export type Trip = EstimateResponse & {
+  id: string;
+  title: string;
   createdAt: string;
 };
 
-export type TripInput = {
-  originLabel: string;
-  destinationLabel: string;
-  originLat: number;
-  originLng: number;
-  destLat: number;
-  destLng: number;
-  mode: TransportMode;
-  distanceKm: number;
-  durationMin: number;
-  co2eKg: number;
-  polyline: [number, number][];
-  factorGPerKm: number;
-  factorSource: string;
-};
-
-export type TripStats = {
-  tripCount: number;
-  totalCo2eKg: number;
-  byMode: Record<TransportMode, { count: number; co2eKg: number }>;
-};
+export type CreateTripRequest = EstimateRequest & { title?: string };

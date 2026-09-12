@@ -1,6 +1,6 @@
 services:
-  db:
-    image: postgres:16
+  postgres:
+    image: postgres:16-alpine
     environment:
       POSTGRES_USER: carbonroute
       POSTGRES_PASSWORD: carbonroute
@@ -9,28 +9,6 @@ services:
       - "5432:5432"
     volumes:
       - carbonroute_pg:/var/lib/postgresql/data
-      - ./apps/api/db/init.sql:/docker-entrypoint-initdb.d/01-init.sql
-      - ./apps/api/db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U carbonroute -d carbonroute"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  api:
-    image: node:22-bookworm
-    working_dir: /app
-    volumes:
-      - .:/app
-    command: bash -lc "npm install && npm run api:start"
-    environment:
-      DATABASE_URL: postgres://carbonroute:carbonroute@db:5432/carbonroute
-      PORT: 43124
-    ports:
-      - "43124:43124"
-    depends_on:
-      db:
-        condition: service_healthy
 
 volumes:
   carbonroute_pg:

@@ -1,18 +1,23 @@
 {
   "name": "carbonroute",
   "private": true,
+  "version": "1.0.0",
+  "description": "CarbonRoute — multi-leg, multi-modal travel emissions planner",
   "workspaces": [
     "apps/api",
     "apps/mobile",
     "packages/shared"
   ],
   "scripts": {
-    "api": "npm run dev --workspace=@carbonroute/api",
-    "api:start": "npm run start --workspace=@carbonroute/api",
-    "seed": "npm run seed --workspace=@carbonroute/api",
-    "mobile": "npm run start --workspace=@carbonroute/mobile",
-    "web": "npm run web --workspace=@carbonroute/mobile",
-    "test": "npm run test --workspace=@carbonroute/shared && npm run test --workspace=@carbonroute/api"
+    "dev": "concurrently -n api,mobile -c green,cyan \"npm run dev -w @carbonroute/api\" \"npm run web -w @carbonroute/mobile\"",
+    "api": "npm run dev -w @carbonroute/api",
+    "mobile": "npm run start -w @carbonroute/mobile",
+    "mobile:web": "npm run web -w @carbonroute/mobile",
+    "test": "npm run test -w @carbonroute/api",
+    "db:migrate": "npm run migrate -w @carbonroute/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   },
   "engines": {
     "node": ">=20"
