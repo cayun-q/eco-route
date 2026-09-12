@@ -44,6 +44,9 @@ export type RouteEstimate = {
   factor: EmissionFactor;
   drivingCo2eKg: number | null;
   vsDrivingKg: number | null;
+  comparisonMode?: TransportMode | null;
+  comparisonCo2eKg?: number | null;
+  vsComparisonKg?: number | null;
   provider: RouteProvider;
   offline?: boolean;
 };
