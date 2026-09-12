@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   createContext,
   useCallback,
@@ -8,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { EmissionFactor, Trip, TripInput, TripStats } from "@carbonroute/shared";
+import type { MeasurementSystem } from "./format";
 import { api } from "./api";
 import {
   cacheFactors,
@@ -17,6 +19,8 @@ import {
   readQueue,
   removeQueued,
 } from "./offline";
+
+const SETTINGS_KEY = "luma.measurement.v1";
 
 const emptyStats = (): TripStats => ({
   tripCount: 0,
@@ -35,6 +39,8 @@ type Store = {
   loading: boolean;
   error: string | null;
   lastRefreshedAt: number | null;
+  measurementSystem: MeasurementSystem;
+  setMeasurementSystem: (value: MeasurementSystem) => Promise<void>;
   refresh: () => Promise<void>;
   saveTrip: (input: TripInput) => Promise<Trip>;
   deleteTrip: (trip: Trip) => Promise<void>;
@@ -51,6 +57,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
+  const [measurementSystem, setMeasurementSystemState] = useState<MeasurementSystem>("metric");
+
+  useEffect(() => {
+    void AsyncStorage.getItem(SETTINGS_KEY).then((saved) => {
+      if (saved === "metric" || saved === "imperial") setMeasurementSystemState(saved);
+    });
+  }, []);
+
+  const setMeasurementSystem = useCallback(async (value: MeasurementSystem) => {
+    setMeasurementSystemState(value);
+    await AsyncStorage.setItem(SETTINGS_KEY, value);
+  }, []);
 
   const flushQueue = useCallback(async () => {
     const queued = await readQueue();
@@ -157,6 +175,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       loading,
       error,
       lastRefreshedAt,
+      measurementSystem,
+      setMeasurementSystem,
       refresh,
       saveTrip,
       deleteTrip,
@@ -170,6 +190,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       loading,
       error,
       lastRefreshedAt,
+      measurementSystem,
+      setMeasurementSystem,
       refresh,
       saveTrip,
       deleteTrip,
