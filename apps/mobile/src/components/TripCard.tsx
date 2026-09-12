@@ -1,37 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { Trip } from "@carbonroute/shared";
 import { colors, radius, shadow, space, type as font } from "../theme";
-import { formatDate, formatKg, formatKm, modeLabel } from "../format";
+import { formatDate, formatKg, formatKm, modeLabel, placeDisplayLabel } from "../format";
 import { Chip } from "../ui";
-
-const ROAD_WORDS = /\b(?:street|st|road|rd|avenue|ave|lane|ln|drive|dr|boulevard|blvd|court|ct|circle|cir|way|highway|hwy|parkway|pkwy|place|pl|terrace|ter|trail|trl)\.?$/i;
-
-function ledgerPlace(label: string): string {
-  const parts = label
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  if (!parts.length) return label;
-
-  // Airport labels are already concise and useful, e.g. "JFK — John F Kennedy...".
-  if (/^[A-Z]{3}\s+[—-]/.test(parts[0])) {
-    const airportCity = parts[1];
-    return airportCity || parts[0].slice(0, 3);
-  }
-
-  // Nominatim address labels can start with either "117 Kingsridge Lane" or
-  // separate chunks such as "117, Kingsridge Lane, Arden, ...". Skip the
-  // house number and street name, then use the first locality/general area.
-  for (const part of parts) {
-    if (/^\d+[A-Za-z-]*$/.test(part)) continue;
-    if (/^\d+\s+/.test(part)) continue;
-    if (ROAD_WORDS.test(part)) continue;
-    return part;
-  }
-
-  return parts[0];
-}
 
 export function TripCard({ trip, onPress }: { trip: Trip; onPress: () => void }) {
   const high = trip.mode === "plane" || trip.co2eKg >= 20;
@@ -43,7 +14,7 @@ export function TripCard({ trip, onPress }: { trip: Trip; onPress: () => void })
     >
       <View style={styles.top}>
         <Text style={styles.route} numberOfLines={2}>
-          {ledgerPlace(trip.originLabel)} → {ledgerPlace(trip.destinationLabel)}
+          {placeDisplayLabel(trip.originLabel)} → {placeDisplayLabel(trip.destinationLabel)}
         </Text>
         <Chip label={modeLabel(trip.mode)} selected tone={trip.mode} />
       </View>
