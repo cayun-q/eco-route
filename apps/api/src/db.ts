@@ -24,7 +24,7 @@ export async function migrateAndSeed(): Promise<void> {
 }
 
 export type FactorRow = {
-  mode: "car" | "plane";
+  mode: "car" | "ev" | "plane";
   g_per_km: string;
   source: string;
   notes: string | null;
@@ -33,14 +33,14 @@ export type FactorRow = {
 
 export async function loadFactors(): Promise<FactorRow[]> {
   const { rows } = await pool.query<FactorRow>(
-    "SELECT mode, g_per_km, source, notes, updated_at FROM emission_factors WHERE mode IN ('car', 'plane') ORDER BY mode",
+    "SELECT mode, g_per_km, source, notes, updated_at FROM emission_factors WHERE mode IN ('car', 'ev', 'plane') ORDER BY mode",
   );
   return rows;
 }
 
 export async function loadFactor(mode: string): Promise<FactorRow | null> {
   const { rows } = await pool.query<FactorRow>(
-    "SELECT mode, g_per_km, source, notes, updated_at FROM emission_factors WHERE mode = $1 AND mode IN ('car', 'plane')",
+    "SELECT mode, g_per_km, source, notes, updated_at FROM emission_factors WHERE mode = $1 AND mode IN ('car', 'ev', 'plane')",
     [mode],
   );
   return rows[0] ?? null;
