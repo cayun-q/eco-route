@@ -88,8 +88,8 @@ export async function estimateItinerary(body: EstimateRequest): Promise<Estimate
       throw Object.assign(new Error(`Leg ${index + 1} origin and destination are the same`), { status: 400 });
     }
     if (input.mode === "plane") {
-      // TODO(openflights): HARD BLOCK — refuse plane OD not in the snapshot
-      // or with no connection. Geometry stays great-circle regardless.
+      // TODO(openflights): HARD BLOCK — no estimate for plane OD pairs
+      // not in the OpenFlights snapshot. Great-circle geometry either way.
       assertAirportConnect(origin, destination);
     }
 

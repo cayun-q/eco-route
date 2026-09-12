@@ -66,7 +66,7 @@ async function handleSuggest(req: express.Request, res: express.Response) {
 
 async function handleAirportSuggest(req: express.Request, res: express.Response) {
   const { q } = readQuery(req);
-  // TODO(openflights): replace gazetteer-backed suggestAirports + add connect-check HARD BLOCK.
+  // TODO(openflights): snapshot search + HARD BLOCK (no suggest for OD not in OpenFlights).
   res.json({ places: suggestAirports(q, 6), provider: "gazetteer-iata" });
 }
 

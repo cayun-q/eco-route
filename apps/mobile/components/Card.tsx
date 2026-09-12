@@ -7,7 +7,7 @@ export function Card({ style, ...props }: ViewProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.paper,
+    backgroundColor: colors.surface,
     borderRadius: radius,
     borderWidth: 1,
     borderColor: colors.ink,

@@ -55,7 +55,7 @@ export function PlaceField({
       <TextInput
         value={query}
         placeholder={mode === "plane" ? "Airport or IATA…" : "Street, city, station…"}
-        placeholderTextColor={colors.inkMuted}
+        placeholderTextColor={colors.muted}
         onFocus={() => setOpen(true)}
         onBlur={() => {
           setTimeout(() => setOpen(false), 180);
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 0.8,
     textTransform: "uppercase",
-    color: colors.inkMuted,
+    color: colors.muted,
     marginBottom: 4,
   },
   input: {
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     borderRadius: radius,
     paddingHorizontal: 10,
     paddingVertical: 9,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     color: colors.ink,
     fontSize: 15,
   },
@@ -126,13 +126,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.ink,
     borderRadius: radius,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     overflow: "hidden",
   },
   hint: {
     fontFamily: "SpaceMono",
     fontSize: 11,
-    color: colors.inkMuted,
+    color: colors.muted,
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   hitKind: {
     fontFamily: "SpaceMono",
     fontSize: 11,
-    color: colors.inkMuted,
+    color: colors.muted,
     marginTop: 1,
   },
 });

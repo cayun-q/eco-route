@@ -7,7 +7,7 @@ import { ModeChip, StatChip } from "./ModeChip";
 export function TotalsBar({ totals }: { totals: TripTotals }) {
   return (
     <View style={styles.row}>
-      <StatChip label="Total CO₂e" value={formatKg(totals.co2eKg)} color={colors.moss} />
+      <StatChip label="Total CO₂e" value={formatKg(totals.co2eKg)} color={colors.accent} />
       <StatChip label="Distance" value={formatKm(totals.distanceKm)} />
       <StatChip label="Time" value={formatDuration(totals.durationMin)} />
     </View>
@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "baseline",
-    backgroundColor: colors.paper,
+    backgroundColor: colors.accentSoft,
     borderWidth: 1,
     borderColor: colors.ink,
     borderRadius: 8,
@@ -71,12 +71,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 0.8,
     textTransform: "uppercase",
-    color: colors.inkMuted,
+    color: colors.accentText,
   },
   stickyValue: {
     fontFamily: "SpaceMono",
-    fontSize: 22,
-    color: colors.ink,
+    fontSize: 24,
+    color: colors.accentText,
+    fontWeight: "700",
   },
   legs: {
     gap: 10,
@@ -96,7 +97,7 @@ const styles = StyleSheet.create({
   },
   legMeta: {
     fontFamily: "SpaceMono",
-    color: colors.inkMuted,
+    color: colors.accentText,
     fontSize: 11,
     marginTop: 2,
   },
@@ -121,7 +122,8 @@ const styles = StyleSheet.create({
   },
   totalValue: {
     fontFamily: "SpaceMono",
-    fontSize: 22,
-    color: colors.ink,
+    fontSize: 24,
+    color: colors.accentText,
+    fontWeight: "700",
   },
 });

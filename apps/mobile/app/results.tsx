@@ -69,14 +69,14 @@ export default function ResultsScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.paper },
+  page: { flex: 1, backgroundColor: colors.bg },
   content: { padding: 16, gap: 14, paddingBottom: 40, maxWidth: 720, width: "100%", alignSelf: "center" },
-  empty: { flex: 1, backgroundColor: colors.paper, padding: 24, justifyContent: "center", gap: 12 },
+  empty: { flex: 1, backgroundColor: colors.bg, padding: 24, justifyContent: "center", gap: 12 },
   emptyTitle: { fontSize: 18, color: colors.ink },
-  muted: { color: colors.inkMuted },
-  kicker: { fontFamily: "SpaceMono", color: colors.moss, letterSpacing: 1.2, fontSize: 11 },
+  muted: { color: colors.muted },
+  kicker: { fontFamily: "SpaceMono", color: colors.accent, letterSpacing: 1.2, fontSize: 11 },
   title: { fontSize: 22, color: colors.ink, fontWeight: "600" },
   mapBlock: { gap: 8 },
-  factorNote: { fontFamily: "SpaceMono", fontSize: 11, color: colors.inkMuted, lineHeight: 16 },
+  factorNote: { fontFamily: "SpaceMono", fontSize: 11, color: colors.muted, lineHeight: 16 },
   note: { color: colors.plane, lineHeight: 20 },
 });

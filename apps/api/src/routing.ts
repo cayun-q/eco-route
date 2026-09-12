@@ -47,44 +47,34 @@ export function interpolateGreatCircle(a: LatLng, b: LatLng, t: number): LatLng 
   };
 }
 
-function offsetPoint(point: LatLng, bearingRad: number, km: number): LatLng {
-  const ang = km / EARTH_KM;
-  const lat1 = toRad(point.lat);
-  const lon1 = toRad(point.lng);
-  const lat2 = Math.asin(
-    Math.sin(lat1) * Math.cos(ang) + Math.cos(lat1) * Math.sin(ang) * Math.cos(bearingRad),
-  );
-  const lon2 =
-    lon1 +
-    Math.atan2(
-      Math.sin(bearingRad) * Math.sin(ang) * Math.cos(lat1),
-      Math.cos(ang) - Math.sin(lat1) * Math.sin(lat2),
-    );
-  return { lat: toDeg(lat2), lng: toDeg(lon2) };
-}
-
-/** Plane geometry is always a great-circle soft arc (not a road chord). */
+/**
+ * Plane: a slight great-circle bow — almost flat, clearly not a lat/lng
+ * chord, no extra sine-lift rainbow, no 3D chrome.
+ */
 export function greatCircleArc(origin: LatLng, destination: LatLng): LatLng[] {
   const distance = haversineKm(origin, destination);
   const steps = Math.max(16, Math.min(48, Math.round(distance / 50) + 16));
   const points: LatLng[] = [];
   for (let i = 0; i <= steps; i += 1) {
-    points.push(interpolateGreatCircle(origin, destination, i / steps));
+    const t = i / steps;
+    points.push(interpolateGreatCircle(origin, destination, t));
   }
   points[0] = origin;
   points[points.length - 1] = destination;
   return points;
 }
 
-export function mockRoad(origin: LatLng, destination: LatLng, mode: "car" | "train"): LatLng[] {
+/** Car/train fallback: flat 2D chord on the ground plane — no arc lift. */
+export function mockRoad(origin: LatLng, destination: LatLng, _mode: "car" | "train"): LatLng[] {
   const distance = haversineKm(origin, destination);
-  const steps = Math.max(8, Math.min(28, Math.round(distance / 80) + 8));
+  const steps = Math.max(2, Math.min(12, Math.round(distance / 120) + 2));
   const points: LatLng[] = [];
   for (let i = 0; i <= steps; i += 1) {
     const t = i / steps;
-    const bulge = Math.sin(Math.PI * t) * Math.min(18, distance * 0.04);
-    const p = interpolateGreatCircle(origin, destination, t);
-    points.push(offsetPoint(p, mode === "train" ? Math.PI / 2 : -Math.PI / 2, bulge));
+    points.push({
+      lat: origin.lat + (destination.lat - origin.lat) * t,
+      lng: origin.lng + (destination.lng - origin.lng) * t,
+    });
   }
   points[0] = origin;
   points[points.length - 1] = destination;

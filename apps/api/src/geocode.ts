@@ -193,8 +193,8 @@ export async function suggestPlaces(query: string, limit = 6, options: SuggestOp
   const q = query.trim();
   if (q.length < 2) return [];
 
-  // TODO(openflights): when mode === "plane", `/api/airports/suggest` becomes the
-  // only source and connect-check HARD-BLOCKS unknown / unconnected IATA pairs.
+  // TODO(openflights): plane suggest is HARD BLOCK later — only snapshot IATA,
+  // no results for OD pairs not in OpenFlights. Car/train stay Nominatim.
   if (options.mode === "plane") {
     return suggestAirports(q, limit);
   }

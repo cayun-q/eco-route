@@ -54,13 +54,13 @@ export default function TripDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.paper },
+  page: { flex: 1, backgroundColor: colors.bg },
   content: { padding: 16, gap: 14, paddingBottom: 40, maxWidth: 720, width: "100%", alignSelf: "center" },
-  empty: { flex: 1, backgroundColor: colors.paper, padding: 24, justifyContent: "center" },
+  empty: { flex: 1, backgroundColor: colors.bg, padding: 24, justifyContent: "center" },
   error: { color: colors.danger },
-  muted: { color: colors.inkMuted },
-  modes: { fontFamily: "SpaceMono", color: colors.moss, fontSize: 12 },
+  muted: { color: colors.muted },
+  modes: { fontFamily: "SpaceMono", color: colors.accent, fontSize: 12 },
   title: { fontSize: 22, color: colors.ink, fontWeight: "600" },
-  meta: { fontFamily: "SpaceMono", color: colors.inkMuted, fontSize: 11 },
+  meta: { fontFamily: "SpaceMono", color: colors.muted, fontSize: 11 },
   mapBlock: { gap: 8 },
 });

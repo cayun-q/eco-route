@@ -9,20 +9,20 @@ import { searchAirports, type Place } from "@carbonroute/shared";
  * TODO(openflights): swap this body for an OpenFlights snapshot search
  * (`GET /api/airports/suggest`). Do not vendor the dataset in this pass.
  *
- * TODO(openflights): connect-check is a HARD BLOCK once it lands —
- * no suggest and no estimate for plane OD pairs missing from the snapshot
- * or with no connection in the graph. Callers should keep `iata` on places
- * so that check can key on IATA (fallback: lat/lng).
+ * Product decision (later PR): connect-check is a HARD BLOCK —
+ * no suggest and no estimate for plane OD pairs not in the OpenFlights
+ * snapshot (and none with no connection). Not enforced this pass so
+ * multi-leg + Nominatim can ship.
  */
 export function suggestAirports(query: string, limit = 6): Place[] {
   return searchAirports(query, limit);
 }
 
 /**
- * TODO(openflights): implement against the snapshot + route graph.
- * Until then this is a no-op so multi-leg + Nominatim can ship.
+ * TODO(openflights): HARD BLOCK once the snapshot lands.
+ * Throw 400 if origin or destination IATA is absent from OpenFlights,
+ * or the pair has no connection. No-op today.
  */
 export function assertAirportConnect(_origin: Place, _destination: Place): void {
-  // HARD BLOCK later: throw 400 if either end is not in OpenFlights
-  // or the pair has no connection. Not enforced this pass.
+  // Intentionally empty — do not block current multimodal ship.
 }
