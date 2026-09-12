@@ -40,6 +40,17 @@ const tripBody = z.object({
   factorSource: z.string().min(1),
 });
 
+function clientId(req: { get(name: string): string | undefined }): string | null {
+  const value = req.get("x-luma-client-id")?.trim();
+  return value && value.length >= 8 && value.length <= 128 ? value : null;
+}
+
+function requireClientId(req: { get(name: string): string | undefined }, res: { status(code: number): { json(body: unknown): unknown } }): string | null {
+  const id = clientId(req);
+  if (!id) res.status(400).json({ error: "Missing or invalid Luma client identifier." });
+  return id;
+}
+
 function mapTrip(row: Record<string, unknown>) {
   return {
     id: row.id,
@@ -62,15 +73,19 @@ function mapTrip(row: Record<string, unknown>) {
   };
 }
 
-tripsRouter.get("/", async (_req, res, next) => {
+tripsRouter.get("/", async (req, res, next) => {
   try {
-    const { rows } = await pool.query("SELECT * FROM trips ORDER BY created_at DESC LIMIT 100");
+    const id = requireClientId(req, res);
+    if (!id) return;
+    const { rows } = await pool.query("SELECT * FROM trips WHERE client_id = $1 ORDER BY created_at DESC LIMIT 100", [id]);
     res.json({ trips: rows.map(mapTrip) });
   } catch (err) { next(err); }
 });
 
 tripsRouter.post("/", async (req, res, next) => {
   try {
+    const id = requireClientId(req, res);
+    if (!id) return;
     const parsed = tripBody.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Trip payload is incomplete or invalid.", details: parsed.error.flatten() });
@@ -79,26 +94,30 @@ tripsRouter.post("/", async (req, res, next) => {
     const t = parsed.data;
     const { rows } = await pool.query(
       `INSERT INTO trips (
-        origin_label, destination_label, origin_lat, origin_lng,
+        client_id, origin_label, destination_label, origin_lat, origin_lng,
         dest_lat, dest_lng, mode, log_method, distance_km, duration_min, co2e_kg,
         polyline, legs, factor_g_per_km, factor_source
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13::jsonb,$14,$15) RETURNING *`,
-      [t.originLabel, t.destinationLabel, t.originLat, t.originLng, t.destLat, t.destLng, t.mode, t.logMethod, t.distanceKm, t.durationMin, t.co2eKg, JSON.stringify(t.polyline), t.legs ? JSON.stringify(t.legs) : null, t.factorGPerKm, t.factorSource],
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14::jsonb,$15,$16) RETURNING *`,
+      [id, t.originLabel, t.destinationLabel, t.originLat, t.originLng, t.destLat, t.destLng, t.mode, t.logMethod, t.distanceKm, t.durationMin, t.co2eKg, JSON.stringify(t.polyline), t.legs ? JSON.stringify(t.legs) : null, t.factorGPerKm, t.factorSource],
     );
     res.status(201).json({ trip: mapTrip(rows[0]) });
   } catch (err) { next(err); }
 });
 
-tripsRouter.delete("/", async (_req, res, next) => {
+tripsRouter.delete("/", async (req, res, next) => {
   try {
-    const result = await pool.query("DELETE FROM trips");
+    const id = requireClientId(req, res);
+    if (!id) return;
+    const result = await pool.query("DELETE FROM trips WHERE client_id = $1", [id]);
     res.json({ deleted: result.rowCount ?? 0 });
   } catch (err) { next(err); }
 });
 
 tripsRouter.get("/:id", async (req, res, next) => {
   try {
-    const { rows } = await pool.query("SELECT * FROM trips WHERE id = $1", [req.params.id]);
+    const id = requireClientId(req, res);
+    if (!id) return;
+    const { rows } = await pool.query("SELECT * FROM trips WHERE id = $1 AND client_id = $2", [req.params.id, id]);
     if (!rows[0]) { res.status(404).json({ error: "Trip not found." }); return; }
     res.json({ trip: mapTrip(rows[0]) });
   } catch (err) { next(err); }
@@ -106,7 +125,9 @@ tripsRouter.get("/:id", async (req, res, next) => {
 
 tripsRouter.delete("/:id", async (req, res, next) => {
   try {
-    const result = await pool.query("DELETE FROM trips WHERE id = $1", [req.params.id]);
+    const id = requireClientId(req, res);
+    if (!id) return;
+    const result = await pool.query("DELETE FROM trips WHERE id = $1 AND client_id = $2", [req.params.id, id]);
     if (!result.rowCount) { res.status(404).json({ error: "Trip not found." }); return; }
     res.json({ deleted: true });
   } catch (err) { next(err); }
