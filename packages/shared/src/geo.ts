@@ -63,10 +63,11 @@ export function greatCirclePolyline(
 ): [number, number][] {
   const dist = haversineKm(a, b);
   const steps = Math.max(minPoints, Math.ceil(dist / 22));
-  const points: [number, number][] = [];
-  for (let i = 0; i <= steps; i += 1) {
+  const points: [number, number][] = [[a.lat, a.lng]];
+  for (let i = 1; i < steps; i += 1) {
     points.push(interpolateGreatCircle(a, b, i / steps));
   }
+  points.push([b.lat, b.lng]);
   return points;
 }
 
