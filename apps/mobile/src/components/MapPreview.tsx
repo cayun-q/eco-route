@@ -2,10 +2,12 @@ import { StyleSheet, Text, View } from "react-native";
 import type { RouteEstimate } from "@carbonroute/shared";
 import { colors, radius, shadow, space, type as font } from "../theme";
 import { formatDuration, formatKg, formatKm, placeDisplayLabel } from "../format";
+import { useStore } from "../store";
 import { Chip } from "../ui";
 import { RouteMap } from "./RouteMap";
 
 export function MapPreview({ estimate }: { estimate: RouteEstimate }) {
+  const { measurementSystem } = useStore();
   const high = estimate.mode === "plane" || estimate.co2eKg >= 20;
   return (
     <View style={styles.chrome}>
@@ -32,7 +34,7 @@ export function MapPreview({ estimate }: { estimate: RouteEstimate }) {
               <View style={styles.legCopy}>
                 <Text style={styles.legTitle}>{leg.summary ?? (leg.mode === "car" ? "Drive" : "Flight")}</Text>
                 <Text style={styles.legMeta}>
-                  {formatKm(leg.distanceKm)} · {formatDuration(leg.durationMin)}
+                  {formatKm(leg.distanceKm, measurementSystem)} · {formatDuration(leg.durationMin)}
                 </Text>
               </View>
             </View>
@@ -40,9 +42,9 @@ export function MapPreview({ estimate }: { estimate: RouteEstimate }) {
         </View>
       ) : null}
       <View style={styles.chips}>
-        <Chip label={formatKm(estimate.distanceKm)} selected />
+        <Chip label={formatKm(estimate.distanceKm, measurementSystem)} selected />
         <Chip label={formatDuration(estimate.durationMin)} selected tone="muted" />
-        <Chip label={`${formatKg(estimate.co2eKg)} CO₂e`} selected tone={high ? "clay" : "accent"} />
+        <Chip label={`${formatKg(estimate.co2eKg, measurementSystem)} CO₂e`} selected tone={high ? "clay" : "accent"} />
       </View>
     </View>
   );
