@@ -7,7 +7,8 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web --port 43123 --host lan"
+    "web": "expo start --web --port 43123 --host lan",
+    "web:build": "expo export --platform web"
   },
   "dependencies": {
     "@carbonroute/shared": "file:../../packages/shared",
