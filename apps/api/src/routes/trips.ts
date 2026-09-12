@@ -71,19 +71,6 @@ tripsRouter.get("/", async (_req, res, next) => {
   }
 });
 
-tripsRouter.get("/:id", async (req, res, next) => {
-  try {
-    const { rows } = await pool.query("SELECT * FROM trips WHERE id = $1", [req.params.id]);
-    if (!rows[0]) {
-      res.status(404).json({ error: "Trip not found." });
-      return;
-    }
-    res.json({ trip: mapTrip(rows[0]) });
-  } catch (err) {
-    next(err);
-  }
-});
-
 tripsRouter.post("/", async (req, res, next) => {
   try {
     const parsed = tripBody.safeParse(req.body);
@@ -119,6 +106,41 @@ tripsRouter.post("/", async (req, res, next) => {
       ],
     );
     res.status(201).json({ trip: mapTrip(rows[0]) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+tripsRouter.delete("/", async (_req, res, next) => {
+  try {
+    const result = await pool.query("DELETE FROM trips");
+    res.json({ deleted: result.rowCount ?? 0 });
+  } catch (err) {
+    next(err);
+  }
+});
+
+tripsRouter.get("/:id", async (req, res, next) => {
+  try {
+    const { rows } = await pool.query("SELECT * FROM trips WHERE id = $1", [req.params.id]);
+    if (!rows[0]) {
+      res.status(404).json({ error: "Trip not found." });
+      return;
+    }
+    res.json({ trip: mapTrip(rows[0]) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+tripsRouter.delete("/:id", async (req, res, next) => {
+  try {
+    const result = await pool.query("DELETE FROM trips WHERE id = $1", [req.params.id]);
+    if (!result.rowCount) {
+      res.status(404).json({ error: "Trip not found." });
+      return;
+    }
+    res.json({ deleted: true });
   } catch (err) {
     next(err);
   }
