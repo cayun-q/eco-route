@@ -20,6 +20,7 @@ export type Airport = {
 type Catalog = {
   airports: Airport[];
   byId: Map<number, Airport>;
+  byIata: Map<string, Airport>;
   adjacency: Map<number, number[]>;
 };
 
@@ -143,7 +144,7 @@ async function loadCatalog(): Promise<Catalog> {
 
   const adjacency = new Map<number, number[]>();
   for (const [id, set] of adjacencySets) adjacency.set(id, [...set]);
-  return { airports, byId, adjacency };
+  return { airports, byId, byIata, adjacency };
 }
 
 function getCatalog(): Promise<Catalog> {
@@ -180,6 +181,12 @@ function bfs(catalog: Catalog, start: number, goal: number, maxFlightLegs = 4): 
   return null;
 }
 
+export async function lookupAirportByIata(code: string): Promise<Airport | null> {
+  const normalized = code.trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(normalized)) return null;
+  return (await getCatalog()).byIata.get(normalized) ?? null;
+}
+
 export async function findFlightPlan(origin: Place, destination: Place): Promise<Airport[]> {
   const catalog = await getCatalog();
   const origins = nearestAirports(catalog, origin, 8);
@@ -195,7 +202,6 @@ export async function findFlightPlan(origin: Place, destination: Place): Promise
       let airKm = 0;
       for (let i = 0; i < airports.length - 1; i += 1) airKm += haversineKm(airports[i], airports[i + 1]);
       const flightLegs = airports.length - 1;
-      // Prefer fewer flights first, then shorter ground access and air distance.
       const score = flightLegs * 100000 + (o.km + d.km) * 100 + airKm;
       if (!best || score < best.score) best = { path: airports, score };
     }
