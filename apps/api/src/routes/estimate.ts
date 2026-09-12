@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
-import { MODES } from "@carbonroute/shared";
+import { MODES, type Place } from "@carbonroute/shared";
 import { geocode, GeocodeError } from "../services/geocode";
 import { routeBetween } from "../services/routing";
 import { emissionsFor } from "../services/emissions";
 import { buildPlaneJourney } from "../services/multimodal";
+import { airportPlace, lookupAirportByIata } from "../services/airportGraph";
 
 export const estimateRouter = Router();
 
@@ -14,6 +15,20 @@ const bodySchema = z.object({
   mode: z.enum(MODES),
   direct: z.boolean().optional().default(false),
 });
+
+function leadingIata(value: string): string | null {
+  const match = value.trim().match(/^([A-Za-z]{3})(?=\s|[-—–]|$)/);
+  return match ? match[1].toUpperCase() : null;
+}
+
+async function resolveDirectFlightPlace(value: string): Promise<Place> {
+  const code = leadingIata(value);
+  if (code) {
+    const airport = await lookupAirportByIata(code);
+    if (airport) return airportPlace(airport);
+  }
+  return geocode(value);
+}
 
 estimateRouter.post("/", async (req, res, next) => {
   try {
@@ -28,7 +43,8 @@ estimateRouter.post("/", async (req, res, next) => {
       return;
     }
 
-    const [origin, destination] = await Promise.all([geocode(originQ), geocode(destQ)]);
+    const resolvePlace = mode === "plane" && direct ? resolveDirectFlightPlace : geocode;
+    const [origin, destination] = await Promise.all([resolvePlace(originQ), resolvePlace(destQ)]);
 
     if (mode === "plane" && !direct) {
       const journey = await buildPlaneJourney(origin, destination);
