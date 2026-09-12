@@ -1,4 +1,4 @@
-export const MODES = ["car", "ev", "plane"] as const;
+export const MODES = ["car", "ev", "bus", "bike", "walk", "plane"] as const;
 export type TransportMode = (typeof MODES)[number];
 export type LogMethod = "automatic" | "manual";
 
@@ -19,7 +19,7 @@ export type EmissionFactor = {
   updatedAt?: string;
 };
 
-export type RouteProvider = "haversine" | "mapbox" | "google" | "ors" | "osrm" | "openflights";
+export type RouteProvider = "haversine" | "mapbox" | "google" | "ors" | "osrm" | "openflights" | "estimated";
 
 export type RouteLeg = {
   mode: TransportMode;
