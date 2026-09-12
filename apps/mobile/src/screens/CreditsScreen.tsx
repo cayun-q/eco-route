@@ -7,6 +7,13 @@ import { Heading, Muted, Screen } from "../ui";
 const creditsArt = require("../../../../3.png");
 const logo = require("../../../../1.png");
 
+const TEAM = [
+  { name: "Sri Lekkala", role: "Design and Carbon Modeling Lead" },
+  { name: "Sue Lei", role: "Data Collection Analyst" },
+  { name: "Izzy Donica", role: "Data Collection Analyst" },
+  { name: "Zachary Price", role: "Web Architecture Lead" },
+] as const;
+
 export function CreditsScreen() {
   const { resolvedTheme } = useStore();
   const styles = useMemo(() => makeStyles(colorsForTheme(resolvedTheme)), [resolvedTheme]);
@@ -17,11 +24,26 @@ export function CreditsScreen() {
           <View style={styles.logoShell}><Image source={logo} style={styles.logo} resizeMode="cover" /></View>
           <View style={styles.headingCopy}>
             <Heading>Credits</Heading>
-            <Muted>Luma is built from a mix of open mapping, routing, airport, and app-development tools.</Muted>
+            <Muted>Luma is built by a small team using open mapping, routing, airport, emissions, and app-development tools.</Muted>
           </View>
         </View>
 
         <View style={styles.wordmarkFrame}><Image source={creditsArt} style={styles.wordmark} resizeMode="cover" /></View>
+
+        <View style={styles.teamSection}>
+          <View style={styles.sectionHeading}>
+            <Text style={styles.sectionTitle}>Meet the team</Text>
+            <Text style={styles.sectionBody}>The people behind Luma's design, data, carbon modeling, and web architecture.</Text>
+          </View>
+          <View style={styles.teamGrid}>
+            {TEAM.map((member) => (
+              <View key={member.name} style={styles.teamCard}>
+                <Text style={styles.memberName}>{member.name}</Text>
+                <Text style={styles.memberRole}>{member.role}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
 
         <View style={styles.card}>
           <Credit title="Maps & geocoding" body="OpenStreetMap data, Nominatim search, and Leaflet map rendering." styles={styles} />
@@ -46,6 +68,14 @@ function makeStyles(colors: ThemeColors) {
     logo: { width: "100%", height: "100%" },
     wordmarkFrame: { height: 118, width: "100%", overflow: "hidden", borderRadius: radius.card, backgroundColor: colors.bg },
     wordmark: { width: "100%", height: "100%", transform: [{ scale: 1.18 }] },
+    teamSection: { gap: space.md },
+    sectionHeading: { gap: 4 },
+    sectionTitle: { fontFamily: font.display, fontSize: 22, color: colors.ink },
+    sectionBody: { fontFamily: font.body, fontSize: 14, lineHeight: 21, color: colors.muted },
+    teamGrid: { gap: space.sm },
+    teamCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: radius.card, padding: space.lg, gap: 4 },
+    memberName: { fontFamily: font.bodyBold, fontSize: 16, color: colors.ink },
+    memberRole: { fontFamily: font.body, fontSize: 14, lineHeight: 20, color: colors.accentText },
     card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: radius.card, padding: space.lg, gap: space.lg },
     credit: { gap: 5 }, creditTitle: { fontFamily: font.bodyMed, fontSize: 15, color: colors.accentText },
     creditBody: { fontFamily: font.body, fontSize: 14, lineHeight: 21, color: colors.muted },
