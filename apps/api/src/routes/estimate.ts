@@ -58,7 +58,24 @@ estimateRouter.post("/", async (req, res, next) => {
         co2eKg += emissions.co2eKg;
         if (leg.mode === "plane" && !planeFactor) planeFactor = emissions.factor;
       }
+      const roundedCo2eKg = Math.round(co2eKg * 1000) / 1000;
       const fallbackFactor = (await emissionsFor("plane", 0)).factor;
+
+      // Compare the full multimodal itinerary against replacing the entire
+      // journey with one car-only route between the user's actual endpoints.
+      // Some trips (for example, across an ocean) have no drivable route, so
+      // the comparison remains unavailable in that case.
+      let drivingCo2eKg: number | null = null;
+      let vsDrivingKg: number | null = null;
+      try {
+        const drivingRoute = await routeBetween(origin, destination, "car");
+        const drivingEmissions = await emissionsFor("car", drivingRoute.distanceKm);
+        drivingCo2eKg = drivingEmissions.co2eKg;
+        vsDrivingKg = Math.round((roundedCo2eKg - drivingCo2eKg) * 1000) / 1000;
+      } catch {
+        drivingCo2eKg = null;
+        vsDrivingKg = null;
+      }
 
       res.json({
         origin,
@@ -68,10 +85,10 @@ estimateRouter.post("/", async (req, res, next) => {
         durationMin: journey.durationMin,
         polyline: journey.polyline,
         legs: journey.legs,
-        co2eKg: Math.round(co2eKg * 1000) / 1000,
+        co2eKg: roundedCo2eKg,
         factor: planeFactor ?? fallbackFactor,
-        drivingCo2eKg: null,
-        vsDrivingKg: null,
+        drivingCo2eKg,
+        vsDrivingKg,
         provider: "openflights",
       });
       return;
