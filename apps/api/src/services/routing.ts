@@ -1,110 +1,58 @@
 import {
-  decodePolyline,
   mockRoute,
   type LatLng,
   type RouteProvider,
   type TransportMode,
 } from "@carbonroute/shared";
+import { AIRPORTS } from "../data/airports";
+import {
+  flightArc,
+  geodesicLine,
+  haversineKm,
+  nearestAirport,
+  type LngLat,
+} from "./flightGeo";
+import { fetchOsrmRoute } from "./osrm";
 
 export type Routed = {
   distanceKm: number;
   durationMin: number;
   polyline: [number, number][];
   provider: RouteProvider;
+  strokeColor: string;
+  routerLabel: string;
+  note?: string;
+  airports?: { originIata: string; destinationIata: string };
+  connectors?: [number, number][][];
 };
 
-async function mapboxRoute(origin: LatLng, dest: LatLng, mode: TransportMode): Promise<Routed> {
-  const token = process.env.MAPBOX_ACCESS_TOKEN;
-  if (!token) throw new Error("MAPBOX_ACCESS_TOKEN missing");
-  const profile = mode === "train" ? "driving" : "driving";
-  const url =
-    `https://api.mapbox.com/directions/v5/mapbox/${profile}/` +
-    `${origin.lng},${origin.lat};${dest.lng},${dest.lat}` +
-    `?geometries=geojson&overview=full&access_token=${encodeURIComponent(token)}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Mapbox ${res.status}`);
-  const body = (await res.json()) as {
-    routes?: Array<{
-      distance: number;
-      duration: number;
-      geometry?: { coordinates?: [number, number][] };
-    }>;
-  };
-  const route = body.routes?.[0];
-  if (!route?.geometry?.coordinates?.length) throw new Error("Mapbox empty route");
-  return {
-    distanceKm: Math.round((route.distance / 1000) * 1000) / 1000,
-    durationMin: Math.max(1, Math.round(route.duration / 60)),
-    polyline: route.geometry.coordinates.map(([lng, lat]) => [lat, lng]),
-    provider: "mapbox",
-  };
+export class RoutingError extends Error {
+  status = 502;
+  constructor(message: string, status = 502) {
+    super(message);
+    this.status = status;
+    this.name = "RoutingError";
+  }
 }
 
-async function googleRoute(origin: LatLng, dest: LatLng, mode: TransportMode): Promise<Routed> {
-  const key = process.env.GOOGLE_MAPS_API_KEY;
-  if (!key) throw new Error("GOOGLE_MAPS_API_KEY missing");
-  const travelMode = mode === "train" ? "transit" : "driving";
-  const url = new URL("https://maps.googleapis.com/maps/api/directions/json");
-  url.searchParams.set("origin", `${origin.lat},${origin.lng}`);
-  url.searchParams.set("destination", `${dest.lat},${dest.lng}`);
-  url.searchParams.set("mode", travelMode);
-  url.searchParams.set("key", key);
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Google ${res.status}`);
-  const body = (await res.json()) as {
-    status: string;
-    routes?: Array<{
-      overview_polyline?: { points?: string };
-      legs?: Array<{ distance?: { value?: number }; duration?: { value?: number } }>;
-    }>;
-  };
-  const route = body.routes?.[0];
-  const encoded = route?.overview_polyline?.points;
-  if (body.status !== "OK" || !encoded) throw new Error(`Google ${body.status}`);
-  const meters = route?.legs?.reduce((n, leg) => n + (leg.distance?.value ?? 0), 0) ?? 0;
-  const seconds = route?.legs?.reduce((n, leg) => n + (leg.duration?.value ?? 0), 0) ?? 0;
-  return {
-    distanceKm: Math.round((meters / 1000) * 1000) / 1000,
-    durationMin: Math.max(1, Math.round(seconds / 60)),
-    polyline: decodePolyline(encoded),
-    provider: "google",
-  };
+const STROKE = {
+  car: "#1F6FEB",
+  plane: "#C2410C",
+  train: "#3F6212",
+} as const;
+
+const CITY_TO_AIRPORT_CONNECTOR_KM = 15;
+
+function labeledFallbackEnabled(): boolean {
+  return process.env.OSRM_LABELED_FALLBACK === "1";
 }
 
-async function orsRoute(origin: LatLng, dest: LatLng): Promise<Routed> {
-  const key = process.env.ORS_API_KEY;
-  if (!key) throw new Error("ORS_API_KEY missing");
-  const res = await fetch("https://api.openrouteservice.org/v2/directions/driving-car/geojson", {
-    method: "POST",
-    headers: {
-      Authorization: key,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      coordinates: [
-        [origin.lng, origin.lat],
-        [dest.lng, dest.lat],
-      ],
-    }),
-  });
-  if (!res.ok) throw new Error(`ORS ${res.status}`);
-  const body = (await res.json()) as {
-    features?: Array<{
-      geometry?: { coordinates?: [number, number][] };
-      properties?: { summary?: { distance?: number; duration?: number } };
-    }>;
-  };
-  const feat = body.features?.[0];
-  const coords = feat?.geometry?.coordinates;
-  if (!coords?.length) throw new Error("ORS empty route");
-  const distanceM = feat?.properties?.summary?.distance ?? 0;
-  const durationS = feat?.properties?.summary?.duration ?? 0;
-  return {
-    distanceKm: Math.round((distanceM / 1000) * 1000) / 1000,
-    durationMin: Math.max(1, Math.round(durationS / 60)),
-    polyline: coords.map(([lng, lat]) => [lat, lng]),
-    provider: "ors",
-  };
+function lngLat(p: LatLng): LngLat {
+  return [p.lng, p.lat];
+}
+
+function toLatLngPolyline(coords: LngLat[]): [number, number][] {
+  return coords.map(([lng, lat]) => [lat, lng]);
 }
 
 export async function routeBetween(
@@ -112,23 +60,80 @@ export async function routeBetween(
   dest: LatLng,
   mode: TransportMode,
 ): Promise<Routed> {
-  // Air routes are great-circle even when road APIs are configured.
-  if (mode === "plane") {
-    return { ...mockRoute(origin, dest, mode), provider: "haversine" };
-  }
-
-  const attempts: Array<() => Promise<Routed>> = [];
-  if (process.env.MAPBOX_ACCESS_TOKEN) attempts.push(() => mapboxRoute(origin, dest, mode));
-  if (process.env.GOOGLE_MAPS_API_KEY) attempts.push(() => googleRoute(origin, dest, mode));
-  if (process.env.ORS_API_KEY) attempts.push(() => orsRoute(origin, dest));
-
-  for (const attempt of attempts) {
+  if (mode === "car") {
     try {
-      return await attempt();
+      const road = await fetchOsrmRoute(lngLat(origin), lngLat(dest));
+      return {
+        distanceKm: Math.round(road.distanceKm * 1000) / 1000,
+        durationMin: Math.max(1, Math.round(road.durationSec / 60)),
+        polyline: toLatLngPolyline(road.coordinates),
+        provider: "osrm",
+        strokeColor: STROKE.car,
+        routerLabel: "Public OSRM (OpenStreetMap roads)",
+      };
     } catch (err) {
-      console.warn("[routing] provider failed, trying next", err);
+      if (labeledFallbackEnabled()) {
+        const mock = mockRoute(origin, dest, mode);
+        return {
+          ...mock,
+          provider: "haversine",
+          strokeColor: STROKE.car,
+          routerLabel: "Labeled fallback — not a road trace (OSRM unavailable)",
+          note: "Road router was unreachable. This line is a labeled fallback, not a drive.",
+        };
+      }
+      const detail = err instanceof Error ? err.message : "unknown error";
+      throw new RoutingError(
+        `Couldn't trace that drive on real roads (${detail}). Try different places, or check OSRM_BASE_URL.`,
+      );
     }
   }
 
-  return { ...mockRoute(origin, dest, mode), provider: "haversine" };
+  if (mode === "plane") {
+    const originAirport = nearestAirport(lngLat(origin), AIRPORTS);
+    const destAirport = nearestAirport(lngLat(dest), AIRPORTS);
+    if (originAirport.iata === destAirport.iata) {
+      throw new RoutingError(
+        `Those places both snap to ${originAirport.iata}. Pick a longer hop for a flight path.`,
+        400,
+      );
+    }
+    const from: LngLat = [originAirport.lng, originAirport.lat];
+    const to: LngLat = [destAirport.lng, destAirport.lat];
+    const airKm = haversineKm(from, to);
+    const connectors: [number, number][][] = [];
+    const originLL = lngLat(origin);
+    const destLL = lngLat(dest);
+    if (haversineKm(originLL, from) >= CITY_TO_AIRPORT_CONNECTOR_KM) {
+      connectors.push(toLatLngPolyline([originLL, from]));
+    }
+    if (haversineKm(destLL, to) >= CITY_TO_AIRPORT_CONNECTOR_KM) {
+      connectors.push(toLatLngPolyline([to, destLL]));
+    }
+    const durationMin = Math.max(30, Math.round((airKm / 800) * 60) + 30);
+    return {
+      distanceKm: Math.round(airKm * 1000) / 1000,
+      durationMin,
+      polyline: toLatLngPolyline(flightArc(from, to)),
+      provider: "airport-arc",
+      strokeColor: STROKE.plane,
+      routerLabel: "Airport-aware flight corridor (curved great-circle, not roads)",
+      note: `Flight via ${originAirport.iata} → ${destAirport.iata}. Curve is an air corridor, not a road trace.`,
+      airports: { originIata: originAirport.iata, destinationIata: destAirport.iata },
+      connectors,
+    };
+  }
+
+  // train — geodesic only in this slice
+  const rail = geodesicLine(lngLat(origin), lngLat(dest));
+  const railKm = haversineKm(lngLat(origin), lngLat(dest));
+  return {
+    distanceKm: Math.round(railKm * 1000) / 1000,
+    durationMin: Math.max(1, Math.round((railKm / 90) * 60)),
+    polyline: toLatLngPolyline(rail),
+    provider: "haversine",
+    strokeColor: STROKE.train,
+    routerLabel: "Geodesic (no rail router in this slice)",
+    note: "Train geometry is a geodesic until a rail router is added.",
+  };
 }

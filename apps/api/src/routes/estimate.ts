@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { MODES } from "@carbonroute/shared";
 import { geocode, GeocodeError } from "../services/geocode";
-import { routeBetween } from "../services/routing";
+import { routeBetween, RoutingError } from "../services/routing";
 import { emissionsFor } from "../services/emissions";
 
 export const estimateRouter = Router();
@@ -42,9 +42,18 @@ estimateRouter.post("/", async (req, res, next) => {
       drivingCo2eKg: emissions.drivingCo2eKg,
       vsDrivingKg: emissions.vsDrivingKg,
       provider: routed.provider,
+      strokeColor: routed.strokeColor,
+      routerLabel: routed.routerLabel,
+      note: routed.note ?? null,
+      airports: routed.airports ?? null,
+      connectors: routed.connectors ?? [],
     });
   } catch (err) {
     if (err instanceof GeocodeError) {
+      res.status(err.status).json({ error: err.message });
+      return;
+    }
+    if (err instanceof RoutingError) {
       res.status(err.status).json({ error: err.message });
       return;
     }
