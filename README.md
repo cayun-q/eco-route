@@ -93,7 +93,7 @@ The Expo app stays mobile-first. On **Log a trip**, the map stays hidden until *
 2. Asks `POST /api/routes/estimate` for distance, duration, and emissions
 3. Overlays chips for those three numbers — confirmation before **Save trip**
 
-Native iOS/Android use `react-native-maps` (Apple Maps on iOS; Google Maps on Android). Expo web uses Leaflet + OpenStreetMap tiles so the same flow works in `npm run mobile:web`.
+Native iOS/Android use `react-native-maps` (Apple Maps on iOS; Google Maps on Android). Expo web uses Leaflet + OpenStreetMap tiles so the same flow works in `npm run mobile:web`. The maps package is a JS dependency only — it is not registered as an Expo config plugin, so Expo web can start without loading native JSX.
 
 Emissions always come from the **Postgres factor table / calculator**, never hardcoded g/km constants.
 

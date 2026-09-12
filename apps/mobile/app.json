@@ -41,8 +41,7 @@
         {
           "locationWhenInUsePermission": "Allow CarbonRoute to use your location as the trip origin."
         }
-      ],
-      "react-native-maps"
+      ]
     ]
   }
 }
