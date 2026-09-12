@@ -1,5 +1,6 @@
 import {
   decodePolyline,
+  haversineKm,
   mockRoute,
   type LatLng,
   type RouteProvider,
@@ -12,6 +13,23 @@ export type Routed = {
   polyline: [number, number][];
   provider: RouteProvider;
 };
+
+const MAX_DRIVING_SEGMENT_KM = 80;
+
+function validateDrivingGeometry(route: Routed): Routed {
+  if (route.polyline.length < 2) throw new Error("Driving route has no usable geometry");
+
+  for (let i = 1; i < route.polyline.length; i += 1) {
+    const [aLat, aLng] = route.polyline[i - 1];
+    const [bLat, bLng] = route.polyline[i];
+    const gapKm = haversineKm({ lat: aLat, lng: aLng }, { lat: bLat, lng: bLng });
+    if (gapKm > MAX_DRIVING_SEGMENT_KM) {
+      throw new Error(`Driving geometry contains an implausible ${Math.round(gapKm)} km jump`);
+    }
+  }
+
+  return route;
+}
 
 async function mapboxRoute(origin: LatLng, dest: LatLng): Promise<Routed> {
   const token = process.env.MAPBOX_ACCESS_TOKEN;
@@ -152,9 +170,9 @@ export async function routeBetween(
 
   for (const attempt of attempts) {
     try {
-      return await attempt();
+      return validateDrivingGeometry(await attempt());
     } catch (err) {
-      console.warn("[routing] provider failed, trying next", err);
+      console.warn("[routing] provider failed or returned invalid driving geometry, trying next", err);
     }
   }
 
