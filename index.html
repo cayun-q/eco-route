@@ -10,41 +10,85 @@
     <main class="card">
       <h1>Eco-Score</h1>
       <p class="lede">
-        Score out of 100 from transport-mode carbon intensity. No map — just the
-        calculation.
+        Score out of 100 from your start/end locations, trip distance, and
+        transport mode. Petrol car trips bottom out around 30 — never 0.
       </p>
 
-      <label class="field" for="transport-mode">
-        Transport mode
-        <select id="transport-mode">
-          <option value="driving-car" selected>Driving (Car)</option>
-          <option value="driving-ev">Electric Vehicle (EV)</option>
-          <option value="cycling-regular">Bicycle</option>
-          <option value="foot-walking">Walking</option>
-        </select>
-      </label>
+      <form id="eco-form">
+        <label class="field" for="start-location">
+          Start location
+          <input
+            id="start-location"
+            name="start"
+            type="text"
+            placeholder="e.g. Trafalgar Square, London"
+            autocomplete="street-address"
+            required
+          />
+        </label>
+
+        <label class="field" for="end-location">
+          End location
+          <input
+            id="end-location"
+            name="end"
+            type="text"
+            placeholder="e.g. Tower Bridge, London"
+            autocomplete="street-address"
+            required
+          />
+        </label>
+
+        <label class="field" for="transport-mode">
+          Transport mode
+          <select id="transport-mode">
+            <option value="driving-car" selected>Driving (Car)</option>
+            <option value="driving-ev">Electric Vehicle (EV)</option>
+            <option value="cycling-regular">Bicycle</option>
+            <option value="foot-walking">Walking</option>
+          </select>
+        </label>
+
+        <button type="submit" id="calculate">Calculate Eco-Score</button>
+      </form>
+
+      <p id="status" class="status">
+        Enter start and end locations, then calculate.
+      </p>
+      <p id="error" class="error" hidden></p>
 
       <section class="score" aria-label="Eco-Score result">
         <div class="score__row">
           <span class="score__label">Eco-Score</span>
           <p class="score__value">
-            <span id="eco-score-value">0</span>
+            <span id="eco-score-value">30</span>
             <span class="score__out-of">/ 100</span>
           </p>
         </div>
         <div
           class="score__track"
           role="meter"
-          aria-valuemin="0"
+          aria-valuemin="30"
           aria-valuemax="100"
-          aria-valuenow="0"
+          aria-valuenow="30"
           aria-labelledby="eco-score-value"
         >
           <div id="eco-score-meter" class="score__meter"></div>
         </div>
-        <p class="score__meta">
-          Carbon intensity: <strong id="intensity">—</strong>
-        </p>
+        <dl class="score__stats">
+          <div>
+            <dt>Distance</dt>
+            <dd id="distance">—</dd>
+          </div>
+          <div>
+            <dt>Intensity</dt>
+            <dd id="intensity">—</dd>
+          </div>
+          <div>
+            <dt>Trip CO₂</dt>
+            <dd id="trip-co2">—</dd>
+          </div>
+        </dl>
       </section>
     </main>
     <script type="module" src="/src/main.js"></script>
