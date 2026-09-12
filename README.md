@@ -1,8 +1,8 @@
-# CarbonRoute
+# Luma
 
-Passenger trip ledger. Log origin and destination, preview the route on a map, and store CO₂e from a **Postgres factor table** — not a hardcoded g/km.
+Passenger travel carbon ledger. Log an origin and destination, preview the route on a map, and store estimated CO₂e from a **Postgres factor table** rather than a hardcoded g/km value.
 
-This is an Expo + Express + Postgres monorepo. The mobile app stays Expo (not Vite). The map appears **only after both ends are set**.
+Luma is an Expo + Express + Postgres monorepo. The app runs on iOS, Android, and web from the same React Native codebase.
 
 ## How to run
 
@@ -10,74 +10,75 @@ This is an Expo + Express + Postgres monorepo. The mobile app stays Expo (not Vi
 cp .env.example .env
 docker compose up -d db
 npm install
-npm run seed          # writes DESNZ/DEFRA 2024 factors if the table is empty
+npm run seed
 npm run api           # Express on http://127.0.0.1:43124
-npm run web           # Expo web on http://127.0.0.1:43123
+npm run web           # Expo web on port 43123, LAN-hosted
 ```
 
-Native: `npm run mobile`, then open in Expo Go. Point `EXPO_PUBLIC_API_URL` at your machine.
+Native: `npm run mobile`, then open the Expo project on a phone. Set `EXPO_PUBLIC_API_URL` to the LAN address of the computer running the API when testing from another device.
 
 Without Docker, create a Postgres database and set `DATABASE_URL`. The API runs `init.sql` + `seed.sql` on boot.
 
 ### Optional routing keys
 
-Leave these blank for mock geocode + haversine / great-circle polylines.
-
 | Env | Provider |
 | --- | --- |
 | `MAPBOX_ACCESS_TOKEN` | Mapbox Directions |
 | `GOOGLE_MAPS_API_KEY` | Google Directions |
-| `ORS_API_KEY` | OpenRouteService |
+| `ORS_API_KEY` | openrouteservice |
 
-Plane trips always use a great-circle path. Road providers apply to car and train.
+OSRM is used as the public road-routing fallback. Car routes are validated before display so malformed or disconnected road geometry is rejected instead of drawing a fake ocean-crossing route.
 
 ## Product flow
 
-1. **Home** — ledger totals and recent trips. Empty until you log one.
-2. **Log trip** — type origin and destination, pick car / plane / train.
-3. After **both** fields have values, `POST /api/routes/estimate` returns a polyline. The map then shows markers, the line, and distance / duration / CO₂e chips.
-4. **Save** → `POST /api/trips` → **Results**. Home refreshes on focus.
-5. Offline: last factor table is cached; failed saves go into a trip queue and flush when the API is reachable. Offline estimates use the same gazetteer + calculator.
+1. **Trips** — ledger totals and recent journeys.
+2. **Log trip / Automatic** — enter the start and finish. Luma builds the route and, for flights, airport access + flight connections.
+3. **Log trip / Manual itinerary** — add car and plane legs yourself when you already know the itinerary. Airport IATA codes such as `JFK`, `ATL`, or `AUS` are supported directly.
+4. **Route preview** — shows road legs in blue, flight legs in orange, plus distance, duration, and estimated CO₂e.
+5. **Save** — persists the trip and its individual itinerary legs to Postgres.
+6. **About / Credits** — available from the top-left Luma menu throughout the app.
+7. Offline saves can queue on-device and sync after the API is reachable again.
 
 ## Structure
 
 ```
 apps/api            Express + Postgres
   db/init.sql       schema
-  db/seed.sql       emission_factors (DESNZ/DEFRA 2024)
-  src/routes        /api/health, /factors, /routes/estimate, /trips, /stats
-  src/services      geocode, routing, emissions calculator
+  db/seed.sql       emission factors
+  src/routes        /api/health, /factors, /geocode, /routes/estimate, /trips, /stats
+  src/services      geocode, road routing, airport graph, multimodal routing, emissions
 apps/mobile         Expo (iOS / Android / web)
-  src/theme.ts      eco-rough tokens
+  src/theme.ts      UI tokens
   src/ui.tsx        Card, Button, Chip, EmptyState, Field
-  src/screens       Home, LogTrip, Results, TripDetail
-  src/components    TripCard, RouteMap, MapPreview
+  src/screens       Trips, LogTrip, Results, TripDetail, About, Credits
+  src/components    TripCard, RouteMap, MapPreview, LumaMenu
   src/offline.ts    factor cache + trip queue
-packages/shared     types, kgFromDistance, haversine, gazetteer
+packages/shared     shared types, emissions helpers, geometry, gazetteer
 ```
+
+The root `1.png`, `2.png`, and `3.png` files are Luma brand assets used by the app home/menu, About, and Credits experiences.
 
 ## API
 
 | Method | Path | Notes |
 | --- | --- | --- |
 | GET | `/api/health` | DB ping |
-| GET | `/api/factors` | Factor table for the offline cache |
-| POST | `/api/routes/estimate` | `{ origin, destination, mode }` → places, polyline, distance, duration, `co2eKg`, factor used, `provider` |
+| GET | `/api/factors` | Emission factor table |
+| GET | `/api/geocode/search` | Address / airport suggestions |
+| POST | `/api/routes/estimate` | Route or direct/manual leg estimate |
 | GET | `/api/trips` | Recent trips |
-| POST | `/api/trips` | Persist a logged trip |
+| POST | `/api/trips` | Persist a logged trip and optional legs |
 | GET | `/api/trips/:id` | One trip |
-| GET | `/api/stats` | Totals for Home |
+| GET | `/api/stats` | Ledger totals |
 
-Emissions: `co2eKg = distanceKm * factor.gPerKm / 1000`. The grams-per-km value is loaded from `emission_factors`.
+Emissions are calculated from route distance and the factor loaded from `emission_factors`.
 
-## Eco-rough UI
+## Visual direction
 
-Paper field-notebook: `#F2EEE4` ground, moss accent `#4A6741`, clay `#A65D3F` for high-emission chips. Cards are radius 8 with a 1px line and a hard 2px offset — no blur. Primary buttons are flat moss and darken on press. Chips are chunky; selected state is accent. Empty states are title + body only. Map chrome is paper / moss; map tiles stay white. Screens use theme tokens only.
+Luma keeps the original field-notebook palette: `#F2EEE4` ground, moss accent `#4A6741`, clay accents, simple outlined cards, and restrained map chrome. The new Luma artwork is layered into the home/menu and informational screens without replacing the functional map and trip UI.
 
 ## Tests
 
 ```bash
 npm test
 ```
-
-Shared tests cover the calculator and polyline helpers. They fail if someone hardcodes g/km into `kgFromDistance`.
