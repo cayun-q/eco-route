@@ -25,6 +25,7 @@ export default function LogTripScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const autoKey = useRef("");
+  const estimateAbort = useRef<AbortController | null>(null);
 
   const ready = Boolean(origin && destination);
   const autoLegs = useMemo(
@@ -32,7 +33,13 @@ export default function LogTripScreen() {
     [origin, destination, mode],
   );
 
+  function abortInFlightEstimate() {
+    estimateAbort.current?.abort();
+    estimateAbort.current = null;
+  }
+
   function setEnd(which: "origin" | "destination", place: Place | null) {
+    abortInFlightEstimate();
     setEstimate(null);
     autoKey.current = "";
     if (which === "origin") setOrigin(place);
@@ -44,6 +51,9 @@ export default function LogTripScreen() {
       if (!fromAuto) setError("Pick an origin and a destination — the map shows up right after.");
       return;
     }
+    abortInFlightEstimate();
+    const controller = new AbortController();
+    estimateAbort.current = controller;
     setBusy(true);
     setError(null);
     const payload = {
@@ -54,13 +64,19 @@ export default function LogTripScreen() {
       })),
     };
     try {
-      const next = await estimateTrip(payload);
+      const next = await estimateTrip(payload, controller.signal);
+      if (controller.signal.aborted) return;
       setEstimate(next);
       stashEstimate(next, payload);
     } catch (err) {
+      if (controller.signal.aborted) return;
+      if (err instanceof Error && err.name === "AbortError") return;
       if (!fromAuto) setError(err instanceof Error ? err.message : "Estimate failed");
     } finally {
-      setBusy(false);
+      if (estimateAbort.current === controller) {
+        setBusy(false);
+        estimateAbort.current = null;
+      }
     }
   }
 
@@ -74,9 +90,16 @@ export default function LogTripScreen() {
       autoKey.current = key;
       runEstimate(true);
     }, 280);
-    return () => clearTimeout(handle);
+    return () => {
+      clearTimeout(handle);
+      abortInFlightEstimate();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, autoLegs]);
+
+  useEffect(() => {
+    return () => abortInFlightEstimate();
+  }, []);
 
   const mapLegs =
     estimate?.legs ??
@@ -100,6 +123,7 @@ export default function LogTripScreen() {
               mode={item}
               selected={mode === item}
               onPress={() => {
+                abortInFlightEstimate();
                 setMode(item);
                 setEstimate(null);
                 autoKey.current = "";
@@ -107,12 +131,18 @@ export default function LogTripScreen() {
             />
           ))}
         </View>
-        <PlaceField label="Origin" value={origin} onChange={(place) => setEnd("origin", place)} />
+        <PlaceField
+          label="Origin"
+          value={origin}
+          onChange={(place) => setEnd("origin", place)}
+          mode={mode}
+        />
         <View style={{ height: 10 }} />
         <PlaceField
           label="Destination"
           value={destination}
           onChange={(place) => setEnd("destination", place)}
+          mode={mode}
         />
       </Card>
 

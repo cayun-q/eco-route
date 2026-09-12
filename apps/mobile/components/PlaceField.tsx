@@ -5,6 +5,25 @@ import { suggestAirports, suggestPlaces } from "@/lib/api";
 import { colors, radius } from "@/lib/theme";
 
 const MIN_CHARS = 2;
+const REMOTE_DEBOUNCE_MS = 240;
+
+function mergePlaces(local: Place[], remote: Place[]): Place[] {
+  const out: Place[] = [...local];
+  for (const place of remote) {
+    const dup = out.find(
+      (p) =>
+        p.id === place.id ||
+        p.label.toLowerCase() === place.label.toLowerCase(),
+    );
+    if (dup) {
+      const idx = out.indexOf(dup);
+      out[idx] = place;
+    } else {
+      out.push(place);
+    }
+  }
+  return out;
+}
 
 export function PlaceField({
   label,
@@ -32,21 +51,46 @@ export function PlaceField({
       setStatus("idle");
       return;
     }
-    setStatus("loading");
+
+    const local = mode === "plane" ? localAirports(query, 8) : localSearch(query, 8);
+    if (local.length) {
+      setHits(local);
+      setStatus("idle");
+    } else {
+      setHits([]);
+      setStatus("loading");
+    }
+
+    const controller = new AbortController();
     const handle = setTimeout(() => {
-      const fetchHits = mode === "plane" ? suggestAirports(query) : suggestPlaces(query, mode);
+      const fetchHits =
+        mode === "plane"
+          ? suggestAirports(query, controller.signal)
+          : suggestPlaces(query, mode, controller.signal);
       fetchHits
         .then((res) => {
-          setHits(res.places);
-          setStatus(res.places.length ? "idle" : "empty");
+          if (controller.signal.aborted) return;
+          const merged = mergePlaces(local, res.places);
+          setHits(merged);
+          setStatus(merged.length ? "idle" : "empty");
         })
-        .catch(() => {
-          const local = mode === "plane" ? localAirports(query, 8) : localSearch(query, 8);
-          setHits(local);
-          setStatus(local.length ? "idle" : "empty");
+        .catch((err: unknown) => {
+          if (controller.signal.aborted) return;
+          if (err instanceof Error && err.name === "AbortError") return;
+          if (local.length) {
+            setHits(local);
+            setStatus("idle");
+          } else {
+            setHits([]);
+            setStatus("empty");
+          }
         });
-    }, 280);
-    return () => clearTimeout(handle);
+    }, REMOTE_DEBOUNCE_MS);
+
+    return () => {
+      clearTimeout(handle);
+      controller.abort();
+    };
   }, [query, open, mode]);
 
   return (

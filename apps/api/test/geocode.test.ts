@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { suggestAirports } from "../src/airports.js";
-import { geocodeOne, parseLatLng, suggestPlaces } from "../src/geocode.js";
+import { clearSuggestCache, geocodeOne, parseLatLng, suggestPlaces } from "../src/geocode.js";
 import { greatCircleArc, interpolateGreatCircle } from "../src/routing.js";
 
 test("parseLatLng accepts a coordinate pair", () => {
@@ -29,6 +29,21 @@ test("suggest includes gazetteer cities and at least five slots of capacity", as
   assert.ok(places.length <= 6);
 });
 
+test("suggest with gazetteer hits does not block on slow Nominatim", async () => {
+  clearSuggestCache();
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => new Promise(() => {})) as typeof fetch;
+  try {
+    const start = Date.now();
+    const places = await suggestPlaces("brooklyn", 6);
+    const elapsed = Date.now() - start;
+    assert.ok(places.some((p) => /brooklyn/i.test(p.label)), "should return local gazetteer hit");
+    assert.ok(elapsed < 900, `local-first should return within provider budget, took ${elapsed}ms`);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("plane airport suggest returns IATA-shaped places without Nominatim", async () => {
   const airports = suggestAirports("sfo", 6);
   assert.ok(airports.some((p) => p.iata === "SFO"));
@@ -50,8 +65,11 @@ test("plane geometry is a great-circle arc, not a two-point chord", () => {
     lng: (origin.lng + dest.lng) / 2,
   };
   const gcMid = interpolateGreatCircle(origin, dest, 0.5);
-  assert.ok(Math.abs(mid.lat - gcMid.lat) < 0.08, "plane should follow the great-circle, not a sine-lift rainbow");
-  assert.ok(Math.abs(mid.lng - gcMid.lng) < 0.08);
+  // DesignBridge bow: mid sits off the pure great-circle by a medium sine lift (~12–18% span).
+  const liftLat = Math.abs(mid.lat - gcMid.lat);
+  const liftLng = Math.abs(mid.lng - gcMid.lng);
+  assert.ok(liftLat > 0.2 || liftLng > 0.2, "plane should bow off the pure great-circle");
+  assert.ok(liftLat < 8 && liftLng < 8, "bow stays medium, not a rainbow");
   assert.ok(
     Math.abs(mid.lat - chordMid.lat) > 0.2 || Math.abs(mid.lng - chordMid.lng) > 0.2,
     "plane should still bow off a straight chord",

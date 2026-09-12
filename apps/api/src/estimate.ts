@@ -77,8 +77,8 @@ export async function estimateItinerary(body: EstimateRequest): Promise<Estimate
     throw Object.assign(new Error("At least one leg is required"), { status: 400 });
   }
 
-  const legs: EstimatedLeg[] = [];
-  for (const [index, input] of inputs.entries()) {
+  // Resolve + validate all places first (sync), then route in parallel.
+  const prepared = inputs.map((input, index) => {
     if (!["car", "plane", "train"].includes(input.mode)) {
       throw Object.assign(new Error(`Unsupported mode: ${input.mode}`), { status: 400 });
     }
@@ -92,35 +92,57 @@ export async function estimateItinerary(body: EstimateRequest): Promise<Estimate
       // not in the OpenFlights snapshot. Great-circle geometry either way.
       assertAirportConnect(origin, destination);
     }
+    return { index, mode: input.mode, origin, destination };
+  });
 
-    const routed = await routeLeg(input.mode, origin, destination);
-    const distanceKm = round(routed.distanceKm, 2);
-    const band = factorBand(input.mode, distanceKm);
-    const factor = await loadFactor(input.mode, band);
-    const kgPerKm = Number(factor.kg_co2e_per_km);
-    const co2eKg = round(distanceKm * kgPerKm, 3);
-    const durationMin = estimateDurationMin(input.mode, distanceKm);
+  const routedList = await Promise.all(
+    prepared.map((leg) => routeLeg(leg.mode, leg.origin, leg.destination)),
+  );
 
-    legs.push({
-      seq: index,
-      mode: input.mode,
-      origin,
-      destination,
-      distanceKm,
-      durationMin,
-      co2eKg,
-      kgCo2ePerKm: kgPerKm,
-      factor: {
-        id: factor.id,
-        activity: factor.activity,
-        band: factor.band,
-        source: factor.source,
-        year: factor.year,
-      },
-      polyline: routed.polyline,
-    });
+  // Factor lookups depend on routed distance; run them in parallel after routing.
+  const factorCache = new Map<string, Promise<FactorRow>>();
+  function factorFor(mode: TravelMode, band: string): Promise<FactorRow> {
+    const key = `${mode}:${band}`;
+    let pending = factorCache.get(key);
+    if (!pending) {
+      pending = loadFactor(mode, band);
+      factorCache.set(key, pending);
+    }
+    return pending;
   }
 
+  const legs: EstimatedLeg[] = await Promise.all(
+    prepared.map(async (leg, i) => {
+      const routed = routedList[i];
+      const distanceKm = round(routed.distanceKm, 2);
+      const band = factorBand(leg.mode, distanceKm);
+      const factor = await factorFor(leg.mode, band);
+      const kgPerKm = Number(factor.kg_co2e_per_km);
+      const co2eKg = round(distanceKm * kgPerKm, 3);
+      const durationMin = estimateDurationMin(leg.mode, distanceKm);
+
+      return {
+        seq: leg.index,
+        mode: leg.mode,
+        origin: leg.origin,
+        destination: leg.destination,
+        distanceKm,
+        durationMin,
+        co2eKg,
+        kgCo2ePerKm: kgPerKm,
+        factor: {
+          id: factor.id,
+          activity: factor.activity,
+          band: factor.band,
+          source: factor.source,
+          year: factor.year,
+        },
+        polyline: routed.polyline,
+      };
+    }),
+  );
+
+  legs.sort((a, b) => a.seq - b.seq);
   return { legs, totals: sumTotals(legs) };
 }
 

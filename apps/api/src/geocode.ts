@@ -4,6 +4,8 @@ import { suggestAirports } from "./airports.js";
 const UA = "CarbonRoute/1.0 (multi-leg travel emissions; https://origin.cursor.com)";
 const cache = new Map<string, { at: number; places: Place[] }>();
 const CACHE_MS = 2 * 60 * 1000;
+/** When gazetteer hits exist, do not block the first response on Nominatim longer than this. */
+const PROVIDER_BUDGET_MS = 400;
 
 export function parseLatLng(query: string): Place | null {
   const m = query.trim().match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);
@@ -32,6 +34,11 @@ function cacheGet(key: string): Place[] | null {
 
 function cacheSet(key: string, places: Place[]) {
   cache.set(key, { at: Date.now(), places });
+}
+
+/** Test helper — clears the in-process suggest cache. */
+export function clearSuggestCache() {
+  cache.clear();
 }
 
 function gazetteerHits(query: string, limit = 6): Place[] {
@@ -103,6 +110,14 @@ async function nominatimSearch(query: string, limit: number): Promise<Place[]> {
   }));
 }
 
+function hasMapboxToken(): boolean {
+  return Boolean(process.env.MAPBOX_TOKEN || process.env.MAPBOX_ACCESS_TOKEN);
+}
+
+function hasGoogleToken(): boolean {
+  return Boolean(process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_API_KEY);
+}
+
 async function mapboxSearch(query: string, limit: number): Promise<Place[]> {
   const token = process.env.MAPBOX_TOKEN || process.env.MAPBOX_ACCESS_TOKEN;
   if (!token) return [];
@@ -156,19 +171,39 @@ async function googleSearch(query: string, limit: number): Promise<Place[]> {
 }
 
 async function providerSearch(query: string, limit: number): Promise<Place[]> {
-  try {
-    const mapbox = await mapboxSearch(query, limit);
-    if (mapbox.length) return mapbox;
-  } catch {
-    /* fall through */
+  // Skip keyed providers when tokens are unset — do not await empty stubs.
+  if (hasMapboxToken()) {
+    try {
+      const mapbox = await mapboxSearch(query, limit);
+      if (mapbox.length) return mapbox;
+    } catch {
+      /* fall through */
+    }
   }
-  try {
-    const google = await googleSearch(query, limit);
-    if (google.length) return google;
-  } catch {
-    /* fall through */
+  if (hasGoogleToken()) {
+    try {
+      const google = await googleSearch(query, limit);
+      if (google.length) return google;
+    } catch {
+      /* fall through */
+    }
   }
   return nominatimSearch(query, limit);
+}
+
+function withBudget<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(null), ms);
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch(() => {
+        clearTimeout(timer);
+        resolve(null);
+      });
+  });
 }
 
 function dedupe(places: Place[]): Place[] {
@@ -205,13 +240,23 @@ export async function suggestPlaces(query: string, limit = 6, options: SuggestOp
 
   const latlng = parseLatLng(q);
   const local = gazetteerHits(q, limit);
+  const seed = [...(latlng ? [latlng] : []), ...local];
+
   let remote: Place[] = [];
-  try {
-    remote = await providerSearch(q, Math.max(8, limit));
-  } catch {
-    remote = [];
+  if (seed.length > 0) {
+    // Local hits exist: Nominatim must not sit on the first-response critical path.
+    // Wait briefly for a provider; merge if it wins, otherwise return local immediately.
+    const raced = await withBudget(providerSearch(q, Math.max(8, limit)), PROVIDER_BUDGET_MS);
+    remote = raced ?? [];
+  } else {
+    try {
+      remote = await providerSearch(q, Math.max(8, limit));
+    } catch {
+      remote = [];
+    }
   }
-  const merged = dedupe([...(latlng ? [latlng] : []), ...local, ...remote]).slice(0, Math.max(5, limit));
+
+  const merged = dedupe([...seed, ...remote]).slice(0, Math.max(5, limit));
   cacheSet(key, merged);
   return merged;
 }

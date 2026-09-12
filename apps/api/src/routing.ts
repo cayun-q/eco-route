@@ -99,9 +99,27 @@ export function mockRoute(mode: TravelMode, origin: LatLng, destination: LatLng)
   return mockRoad(origin, destination, mode);
 }
 
-async function osrmGeometry(origin: LatLng, destination: LatLng): Promise<{ polyline: LatLng[]; distanceKm: number } | null> {
+type RoutedLeg = { polyline: LatLng[]; distanceKm: number };
+
+/** In-process cache: mode + coords rounded to 4 decimal places. */
+const routeCache = new Map<string, RoutedLeg>();
+
+function roundCoord(n: number): string {
+  return n.toFixed(4);
+}
+
+function routeCacheKey(mode: TravelMode, origin: LatLng, destination: LatLng): string {
+  return `${mode}:${roundCoord(origin.lat)},${roundCoord(origin.lng)}:${roundCoord(destination.lat)},${roundCoord(destination.lng)}`;
+}
+
+/** Test helper — clears the in-process route cache. */
+export function clearRouteCache() {
+  routeCache.clear();
+}
+
+async function osrmGeometry(origin: LatLng, destination: LatLng): Promise<RoutedLeg | null> {
   const path = `${origin.lng},${origin.lat};${destination.lng},${destination.lat}`;
-  const url = `https://router.project-osrm.org/route/v1/driving/${path}?overview=full&geometries=geojson`;
+  const url = `https://router.project-osrm.org/route/v1/driving/${path}?overview=simplified&geometries=geojson`;
   try {
     const res = await fetch(url, {
       headers: { Accept: "application/json" },
@@ -127,15 +145,26 @@ export async function routeLeg(
   mode: TravelMode,
   origin: LatLng,
   destination: LatLng,
-): Promise<{ polyline: LatLng[]; distanceKm: number }> {
+): Promise<RoutedLeg> {
+  const key = routeCacheKey(mode, origin, destination);
+  const cached = routeCache.get(key);
+  if (cached) return cached;
+
   const gc = haversineKm(origin, destination);
+  let result: RoutedLeg;
   if (mode === "plane") {
-    return { polyline: greatCircleArc(origin, destination), distanceKm: gc * 1.08 };
+    result = { polyline: greatCircleArc(origin, destination), distanceKm: gc * 1.08 };
+  } else {
+    const osrm = await osrmGeometry(origin, destination);
+    if (osrm) {
+      result = osrm;
+    } else {
+      const factor = mode === "train" ? 1.18 : 1.22;
+      result = { polyline: mockRoad(origin, destination, mode), distanceKm: gc * factor };
+    }
   }
-  const osrm = await osrmGeometry(origin, destination);
-  if (osrm) return osrm;
-  const factor = mode === "train" ? 1.18 : 1.22;
-  return { polyline: mockRoad(origin, destination, mode), distanceKm: gc * factor };
+  routeCache.set(key, result);
+  return result;
 }
 
 export function estimateDurationMin(mode: TravelMode, distanceKm: number): number {

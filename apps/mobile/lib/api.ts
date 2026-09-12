@@ -20,23 +20,27 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return data;
 }
 
-export function suggestPlaces(q: string, mode?: TravelMode): Promise<{ places: Place[] }> {
+export function suggestPlaces(
+  q: string,
+  mode?: TravelMode,
+  signal?: AbortSignal,
+): Promise<{ places: Place[] }> {
   const params = new URLSearchParams({ q });
   if (mode) params.set("mode", mode);
-  return request(`/api/geocode/suggest?${params.toString()}`);
+  return request(`/api/geocode/suggest?${params.toString()}`, signal ? { signal } : undefined);
 }
 
-export function suggestAirports(q: string): Promise<{ places: Place[] }> {
+export function suggestAirports(q: string, signal?: AbortSignal): Promise<{ places: Place[] }> {
   // TODO(openflights): IATA picker. Later HARD BLOCK — no suggest for OD not in snapshot.
-  return request(`/api/airports/suggest?q=${encodeURIComponent(q)}`);
+  return request(`/api/airports/suggest?q=${encodeURIComponent(q)}`, signal ? { signal } : undefined);
 }
 
 export function searchPlaces(q: string): Promise<{ places: Place[] }> {
   return suggestPlaces(q);
 }
 
-export function estimateTrip(body: EstimateRequest): Promise<EstimateResponse> {
-  return request("/estimate", { method: "POST", body: JSON.stringify(body) });
+export function estimateTrip(body: EstimateRequest, signal?: AbortSignal): Promise<EstimateResponse> {
+  return request("/estimate", { method: "POST", body: JSON.stringify(body), signal });
 }
 
 export function createTrip(body: CreateTripRequest): Promise<Trip> {

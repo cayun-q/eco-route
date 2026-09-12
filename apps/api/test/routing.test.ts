@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { flightBand, haversineKm, mockRoute } from "../src/routing.js";
+import { clearRouteCache, flightBand, haversineKm, mockRoute, routeLeg } from "../src/routing.js";
 
 test("haversine SFO–JFK is about 4,150 km", () => {
   const km = haversineKm({ lat: 37.6213, lng: -122.379 }, { lat: 40.6413, lng: -73.7781 });
@@ -44,5 +44,47 @@ test("car and train stay on a flat ground chord", () => {
     const chordLng = (origin.lng + destination.lng) / 2;
     assert.ok(Math.abs(mid.lat - chordLat) < 0.02);
     assert.ok(Math.abs(mid.lng - chordLng) < 0.02);
+  }
+});
+
+test("OSRM uses overview=simplified and caches same OD", async () => {
+  clearRouteCache();
+  let calls = 0;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.includes("router.project-osrm.org")) {
+      calls += 1;
+      assert.ok(url.includes("overview=simplified"), "OSRM should request simplified overview");
+      assert.ok(!url.includes("overview=full"));
+      return new Response(
+        JSON.stringify({
+          routes: [
+            {
+              distance: 12000,
+              geometry: {
+                coordinates: [
+                  [-122.4194, 37.7749],
+                  [-122.379, 37.6213],
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return originalFetch(input as RequestInfo);
+  }) as typeof fetch;
+  try {
+    const a = { lat: 37.7749, lng: -122.4194 };
+    const b = { lat: 37.6213, lng: -122.379 };
+    const first = await routeLeg("car", a, b);
+    const second = await routeLeg("car", a, b);
+    assert.equal(calls, 1, "same OD should hit OSRM once");
+    assert.equal(first.distanceKm, second.distanceKm);
+    assert.deepEqual(first.polyline, second.polyline);
+  } finally {
+    globalThis.fetch = originalFetch;
   }
 });
