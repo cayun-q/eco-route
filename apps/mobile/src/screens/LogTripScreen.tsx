@@ -381,8 +381,8 @@ export function LogTripScreen({ navigation }: Props) {
             </View>
             <Muted>
               {logMethod === "automatic"
-                ? "Enter the trip endpoints and CarbonRoute will build the road / airport / flight itinerary for you."
-                : "Already know the itinerary? Add each drive or flight leg yourself; CarbonRoute will only calculate it."}
+                ? "Enter the trip endpoints and Luma will build the road / airport / flight itinerary for you."
+                : "Already know the itinerary? Add each drive or flight leg yourself; Luma will only calculate it."}
             </Muted>
           </View>
 
