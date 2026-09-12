@@ -31,7 +31,7 @@ test("plane arcs have more than a straight chord", () => {
   const mid = line[Math.floor(line.length / 2)];
   const chordLat = (origin.lat + destination.lat) / 2;
   assert.ok(Math.abs(mid.lat - chordLat) > 0.5, "great-circle should bow off the chord");
-  assert.ok(Math.abs(mid.lat - chordLat) < 3.2, "bow should stay slight, not a rainbow");
+  assert.ok(Math.abs(mid.lat - chordLat) < 8, "bow ~12–18% span — medium, not a rainbow");
 });
 
 test("car and train stay on a flat ground chord", () => {

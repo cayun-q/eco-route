@@ -48,16 +48,29 @@ export function interpolateGreatCircle(a: LatLng, b: LatLng, t: number): LatLng 
 }
 
 /**
- * Plane: a slight great-circle bow — almost flat, clearly not a lat/lng
- * chord, no extra sine-lift rainbow, no 3D chrome.
+ * Plane: medium visual bow — great-circle base plus a sine lift of ~15% of
+ * span (DesignBridge lock: 12–18%). Distinct from flat car/train; not a rainbow.
  */
 export function greatCircleArc(origin: LatLng, destination: LatLng): LatLng[] {
   const distance = haversineKm(origin, destination);
   const steps = Math.max(16, Math.min(48, Math.round(distance / 50) + 16));
+  // Mid bow height ≈ 15% of span, converted km → degrees (~111 km/°).
+  const bowDeg = (distance * 0.15) / 111;
+  const dLat = destination.lat - origin.lat;
+  const dLng = destination.lng - origin.lng;
+  const len = Math.hypot(dLat, dLng) || 1;
+  // Perpendicular in the map plane (left of travel).
+  const pLat = -dLng / len;
+  const pLng = dLat / len;
   const points: LatLng[] = [];
   for (let i = 0; i <= steps; i += 1) {
     const t = i / steps;
-    points.push(interpolateGreatCircle(origin, destination, t));
+    const gc = interpolateGreatCircle(origin, destination, t);
+    const lift = Math.sin(Math.PI * t) * bowDeg;
+    points.push({
+      lat: gc.lat + pLat * lift,
+      lng: gc.lng + pLng * lift,
+    });
   }
   points[0] = origin;
   points[points.length - 1] = destination;

@@ -93,7 +93,7 @@ export function RouteMap({
               points={pts}
               fill="none"
               stroke={modeColor[leg.mode]}
-              strokeWidth={2.4}
+              strokeWidth={3.6}
               strokeLinejoin="round"
               strokeLinecap="round"
             />
