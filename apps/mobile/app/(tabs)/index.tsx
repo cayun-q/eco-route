@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 16, color: colors.ink, marginBottom: 6 },
   muted: { color: colors.inkMuted, lineHeight: 20 },
   error: { color: colors.danger, marginBottom: 6 },
-  warn: { backgroundColor: "#F6E6D8" },
+  warn: { backgroundColor: colors.warnSoft },
   warnTitle: { fontFamily: "SpaceMono", color: colors.plane, marginBottom: 6 },
   warnCopy: { color: colors.inkMuted, marginBottom: 10 },
 });

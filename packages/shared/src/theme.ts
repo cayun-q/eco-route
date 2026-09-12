@@ -11,6 +11,7 @@ export const colors = {
   plane: "#A65D3F",
   train: "#3D5560",
   white: "#FBF8F1",
+  warnSoft: "#F6E6D8",
 } as const;
 
 export const modes = ["car", "plane", "train"] as const;
