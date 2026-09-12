@@ -8,17 +8,15 @@ import { colors, radius, shadow, space, type as font } from "../theme";
 const logo = require("../../../../1.png");
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
+type MenuRoute = "Home" | "LogTrip" | "About" | "Credits" | "Settings";
 
 export function LumaMenuButton() {
   const navigation = useNavigation<Nav>();
   const [open, setOpen] = useState(false);
 
-  function go(route: "Home" | "LogTrip" | "About" | "Credits") {
+  function go(route: MenuRoute) {
     setOpen(false);
-    if (route === "Home") navigation.navigate("Home");
-    if (route === "LogTrip") navigation.navigate("LogTrip");
-    if (route === "About") navigation.navigate("About");
-    if (route === "Credits") navigation.navigate("Credits");
+    navigation.navigate(route as never);
   }
 
   return (
@@ -49,6 +47,7 @@ export function LumaMenuButton() {
             <View style={styles.rule} />
             <MenuItem label="Trips" detail="Your trip ledger" onPress={() => go("Home")} />
             <MenuItem label="Log trip" detail="Automatic or manual itinerary" onPress={() => go("LogTrip")} />
+            <MenuItem label="Settings" detail="Units and display preferences" onPress={() => go("Settings")} />
             <MenuItem label="About" detail="What Luma does" onPress={() => go("About")} />
             <MenuItem label="Credits" detail="Data, tools, and acknowledgements" onPress={() => go("Credits")} />
           </View>
