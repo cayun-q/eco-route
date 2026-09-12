@@ -1,49 +1,39 @@
 export const lightColors = {
-  bg: "#F4F7F1",
+  bg: "#F8FAFC",
   surface: "#FFFFFF",
-  surfaceMuted: "#E9F0E9",
-  ink: "#17352A",
-  muted: "#66786E",
-  line: "#CDDCCF",
-  accent: "#2F6B4F",
-  accentSoft: "#DCECE2",
-  accentText: "#24533D",
-  accentPressed: "#25583F",
+  surfaceMuted: "#F0FDFA",
+  ink: "#0F172A",
+  muted: "#64748B",
+  line: "#99F6E4",
+  accent: "#0F766E",
+  accentSoft: "#CCFBF1",
+  accentText: "#134E4A",
+  accentPressed: "#0D9488",
   warn: "#B8872F",
-  warnSoft: "#F1E6CB",
-  danger: "#A33A3A",
-  clay: "#A66048",
+  warnSoft: "#FEF3C7",
+  danger: "#B91C1C",
+  clay: "#B45309",
   white: "#FFFFFF",
-  mode: {
-    car: "#3F7658",
-    ev: "#23845D",
-    plane: "#B06A45",
-    train: "#45666A",
-  },
+  mode: { car: "#475569", ev: "#0F766E", bus: "#0891B2", bike: "#16A34A", walk: "#22C55E", plane: "#D97706" },
 } as const;
 
 export const darkColors = {
-  bg: "#17191C",
-  surface: "#202327",
-  surfaceMuted: "#292D31",
-  ink: "#F1F3F2",
-  muted: "#A8AEB0",
-  line: "#3A3F44",
-  accent: "#4F8F68",
-  accentSoft: "#26362D",
-  accentText: "#9FD0AF",
-  accentPressed: "#5C9D75",
+  bg: "#0F172A",
+  surface: "#172033",
+  surfaceMuted: "#123A38",
+  ink: "#F8FAFC",
+  muted: "#94A3B8",
+  line: "#285E59",
+  accent: "#14B8A6",
+  accentSoft: "#163F3B",
+  accentText: "#99F6E4",
+  accentPressed: "#2DD4BF",
   warn: "#D0A653",
   warnSoft: "#3A3426",
-  danger: "#E07B7B",
-  clay: "#C98665",
+  danger: "#F87171",
+  clay: "#FB923C",
   white: "#FFFFFF",
-  mode: {
-    car: "#5E9B73",
-    ev: "#53B987",
-    plane: "#C98665",
-    train: "#7A9299",
-  },
+  mode: { car: "#94A3B8", ev: "#2DD4BF", bus: "#22D3EE", bike: "#4ADE80", walk: "#86EFAC", plane: "#FB923C" },
 } as const;
 
 export type ThemeColors = typeof lightColors;
@@ -54,24 +44,9 @@ export function colorsForTheme(theme: ResolvedTheme): ThemeColors {
   return (theme === "dark" ? darkColors : lightColors) as ThemeColors;
 }
 
-// Kept as the light palette for legacy/static styles while screens migrate to dynamic colors.
 export const colors = lightColors;
-
-export const space = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  xxl: 32,
-} as const;
-
-export const radius = {
-  card: 10,
-  chip: 10,
-  button: 10,
-} as const;
-
+export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
+export const radius = { card: 16, chip: 999, button: 9 } as const;
 export const type = {
   display: "Fraunces_600SemiBold",
   displayItalic: "Fraunces_600SemiBold_Italic",
@@ -81,20 +56,8 @@ export const type = {
 } as const;
 
 export function shadowFor(colors: ThemeColors) {
-  return {
-    hard: {
-      shadowColor: colors.ink,
-      shadowOffset: { width: 1, height: 2 },
-      shadowOpacity: 0.12,
-      shadowRadius: 2,
-      elevation: 2,
-    },
-  } as const;
+  return { hard: { shadowColor: colors.ink, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 3 } } as const;
 }
 
 export const shadow = shadowFor(lightColors);
-
-export const fontsFallback = {
-  display: "Georgia",
-  body: "system-ui",
-};
+export const fontsFallback = { display: "Georgia", body: "system-ui" };
