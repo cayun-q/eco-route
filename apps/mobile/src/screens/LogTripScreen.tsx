@@ -21,13 +21,13 @@ import { vsDrivingCopy } from "../format";
 
 type Props = NativeStackScreenProps<RootStackParamList, "LogTrip">;
 
-const MODES: TransportMode[] = ["car", "plane", "train"];
+const MODES: TransportMode[] = ["car", "plane"];
 
 export function LogTripScreen({ navigation }: Props) {
   const { factors, saveTrip } = useStore();
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
-  const [mode, setMode] = useState<TransportMode>("train");
+  const [mode, setMode] = useState<TransportMode>("car");
   const [estimate, setEstimate] = useState<RouteEstimate | null>(null);
   const [estimating, setEstimating] = useState(false);
   const [estimateError, setEstimateError] = useState<string | null>(null);
@@ -143,7 +143,7 @@ export function LogTripScreen({ navigation }: Props) {
             <View style={styles.hold}>
               <Text style={styles.holdTitle}>Waiting on both ends</Text>
               <Text style={styles.holdBody}>
-                Add a start and a finish. CarbonRoute will plot markers, a polyline, and distance / duration / CO₂e
+                Add a start and a finish. CarbonRoute will plot markers, a route, and distance / duration / CO₂e
                 chips.
               </Text>
             </View>
