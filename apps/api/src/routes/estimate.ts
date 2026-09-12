@@ -39,18 +39,14 @@ async function planeJourneyEmissions(origin: Place, destination: Place) {
     co2eKg += emissions.co2eKg;
     if (leg.mode === "plane" && !planeFactor) planeFactor = emissions.factor;
   }
-  return {
-    journey,
-    co2eKg: Math.round(co2eKg * 1000) / 1000,
-    planeFactor,
-  };
+  return { journey, co2eKg: Math.round(co2eKg * 1000) / 1000, planeFactor };
 }
 
 estimateRouter.post("/", async (req, res, next) => {
   try {
     const parsed = bodySchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ error: "origin, destination, and mode (car|ev|plane) are required." });
+      res.status(400).json({ error: "origin, destination, and a valid transport mode are required." });
       return;
     }
     const { origin: originQ, destination: destQ, mode, direct } = parsed.data;
@@ -65,7 +61,6 @@ estimateRouter.post("/", async (req, res, next) => {
     if (mode === "plane" && !direct) {
       const { journey, co2eKg: roundedCo2eKg, planeFactor } = await planeJourneyEmissions(origin, destination);
       const fallbackFactor = (await emissionsFor("plane", 0)).factor;
-
       let drivingCo2eKg: number | null = null;
       let vsDrivingKg: number | null = null;
       try {
@@ -77,11 +72,8 @@ estimateRouter.post("/", async (req, res, next) => {
         drivingCo2eKg = null;
         vsDrivingKg = null;
       }
-
       res.json({
-        origin,
-        destination,
-        mode,
+        origin, destination, mode,
         distanceKm: journey.distanceKm,
         durationMin: journey.durationMin,
         polyline: journey.polyline,
@@ -98,33 +90,25 @@ estimateRouter.post("/", async (req, res, next) => {
       return;
     }
 
-    // Electric cars use the same road geometry as cars; only the emissions
-    // factor differs. routeBetween routes every non-plane road mode through
-    // the real road-routing provider chain.
     const routed = await routeBetween(origin, destination, mode);
     const emissions = await emissionsFor(mode, routed.distanceKm);
-
     let comparisonMode: TransportMode | null = null;
     let comparisonCo2eKg: number | null = null;
     let vsComparisonKg: number | null = null;
 
-    if (mode === "car" || mode === "ev") {
-      try {
-        const plane = await planeJourneyEmissions(origin, destination);
-        comparisonMode = "plane";
-        comparisonCo2eKg = plane.co2eKg;
-        vsComparisonKg = Math.round((emissions.co2eKg - comparisonCo2eKg) * 1000) / 1000;
-      } catch {
-        comparisonMode = null;
-        comparisonCo2eKg = null;
-        vsComparisonKg = null;
-      }
+    try {
+      const plane = await planeJourneyEmissions(origin, destination);
+      comparisonMode = "plane";
+      comparisonCo2eKg = plane.co2eKg;
+      vsComparisonKg = Math.round((emissions.co2eKg - comparisonCo2eKg) * 1000) / 1000;
+    } catch {
+      comparisonMode = null;
+      comparisonCo2eKg = null;
+      vsComparisonKg = null;
     }
 
     res.json({
-      origin,
-      destination,
-      mode,
+      origin, destination, mode,
       distanceKm: routed.distanceKm,
       durationMin: routed.durationMin,
       polyline: routed.polyline,
