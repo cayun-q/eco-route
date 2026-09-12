@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import type { RouteEstimate } from "@carbonroute/shared";
+import type { RouteEstimate, TransportMode } from "@carbonroute/shared";
 import { colorsForTheme, radius, shadowFor, space, type as font, type ThemeColors } from "../theme";
-import { formatDuration, formatKg, formatKm, placeDisplayLabel } from "../format";
+import { formatDuration, formatKg, formatKm, modeLabel, placeDisplayLabel } from "../format";
 import { useStore } from "../store";
 import { Chip } from "../ui";
 import { RouteMap } from "./RouteMap";
@@ -12,6 +12,8 @@ export function MapPreview({ estimate }: { estimate: RouteEstimate }) {
   const colors = colorsForTheme(resolvedTheme);
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const high = estimate.mode === "plane" || estimate.co2eKg >= 20;
+  const modeColor = (mode: TransportMode) => colors.mode[mode];
+
   return (
     <View style={styles.chrome}>
       <View style={styles.bar}>
@@ -25,12 +27,9 @@ export function MapPreview({ estimate }: { estimate: RouteEstimate }) {
         <View style={styles.legs}>
           {estimate.legs.map((leg, index) => (
             <View key={`${leg.mode}-${index}`} style={styles.legRow}>
-              <View style={[
-                styles.legDot,
-                leg.mode === "plane" ? styles.planeDot : leg.mode === "ev" ? styles.evDot : styles.carDot,
-              ]} />
+              <View style={[styles.legDot, { backgroundColor: modeColor(leg.mode) }]} />
               <View style={styles.legCopy}>
-                <Text style={styles.legTitle}>{leg.summary ?? (leg.mode === "plane" ? "Flight" : leg.mode === "ev" ? "Electric drive" : "Drive")}</Text>
+                <Text style={styles.legTitle}>{leg.summary ?? modeLabel(leg.mode)}</Text>
                 <Text style={styles.legMeta}>{formatKm(leg.distanceKm, measurementSystem, displayPrecision)} · {formatDuration(leg.durationMin)}</Text>
               </View>
             </View>
@@ -57,8 +56,9 @@ function makeStyles(colors: ThemeColors) {
     legs: { paddingHorizontal: space.md, paddingVertical: space.sm, gap: 8, borderTopWidth: 1, borderTopColor: colors.line },
     legRow: { flexDirection: "row", alignItems: "center", gap: 10 },
     legDot: { width: 10, height: 10, borderRadius: 5 },
-    carDot: { backgroundColor: "#2563EB" }, evDot: { backgroundColor: "#16A36A" }, planeDot: { backgroundColor: "#D97706" }, legCopy: { flex: 1 },
-    legTitle: { fontFamily: font.bodyMed, fontSize: 13, color: colors.ink }, legMeta: { fontFamily: font.body, fontSize: 12, color: colors.muted },
+    legCopy: { flex: 1 },
+    legTitle: { fontFamily: font.bodyMed, fontSize: 13, color: colors.ink },
+    legMeta: { fontFamily: font.body, fontSize: 12, color: colors.muted },
     chips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm, padding: space.md, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.line },
   });
 }
