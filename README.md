@@ -21,13 +21,18 @@ Open the URL printed in the terminal (port `43123` by default).
 
 ## Usage
 
-1. Click the map to set a **start** point.
-2. Click again to set an **end** point.
-3. The app requests a `driving-car` route from OpenRouteService and shows distance, duration, and estimated CO₂.
+1. Choose a transport mode: Driving (Car), Electric Vehicle (EV), Bicycle, or Walking.
+2. Click the map to set a **start** point.
+3. Click again to set an **end** point.
+4. The app requests a matching OpenRouteService profile and shows distance, duration, and estimated CO₂.
+5. Changing the mode with both points set re-fetches and re-renders the route.
 
-CO₂ is calculated as:
-
-`distance_km × 171 g CO₂/km` (average petrol passenger car factor), shown in g or kg.
+| Mode | ORS profile | CO₂ factor |
+| --- | --- | --- |
+| Driving (Car) | `driving-car` | 171 g/km |
+| Electric Vehicle (EV) | `driving-car` | 45 g/km |
+| Bicycle | `cycling-regular` | 0 g/km |
+| Walking | `foot-walking` | 0 g/km |
 
 ## Notes
 

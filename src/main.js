@@ -1,9 +1,29 @@
 const ORS_API_KEY = import.meta.env.VITE_ORS_API_KEY;
-const ORS_DIRECTIONS_URL =
-  "https://api.openrouteservice.org/v2/directions/driving-car/geojson";
+const ORS_DIRECTIONS_BASE =
+  "https://api.openrouteservice.org/v2/directions";
 
-// Average petrol passenger car, g CO₂ per km (UK DEFRA / EEA-style factor).
-const CO2_G_PER_KM = 171;
+const TRANSPORT_MODES = {
+  "driving-car": {
+    label: "Driving (Car)",
+    profile: "driving-car",
+    co2GPerKm: 171,
+  },
+  "driving-ev": {
+    label: "Electric Vehicle (EV)",
+    profile: "driving-car",
+    co2GPerKm: 45,
+  },
+  "cycling-regular": {
+    label: "Bicycle",
+    profile: "cycling-regular",
+    co2GPerKm: 0,
+  },
+  "foot-walking": {
+    label: "Walking",
+    profile: "foot-walking",
+    co2GPerKm: 0,
+  },
+};
 
 const statusEl = document.getElementById("status");
 const statsEl = document.getElementById("stats");
@@ -12,6 +32,7 @@ const durationEl = document.getElementById("duration");
 const co2El = document.getElementById("co2");
 const errorEl = document.getElementById("error");
 const resetBtn = document.getElementById("reset");
+const modeSelect = document.getElementById("transport-mode");
 
 const map = L.map("map").setView([51.505, -0.09], 13);
 
@@ -26,6 +47,11 @@ let endMarker = null;
 let routeLayer = null;
 let startLatLng = null;
 let endLatLng = null;
+let fetchToken = 0;
+
+function getSelectedMode() {
+  return TRANSPORT_MODES[modeSelect.value] ?? TRANSPORT_MODES["driving-car"];
+}
 
 function setStatus(message) {
   statusEl.textContent = message;
@@ -58,12 +84,15 @@ function formatDuration(seconds) {
   return `${hours} h ${minutes} min`;
 }
 
-function calculateCo2Kg(distanceMeters) {
+function calculateCo2Kg(distanceMeters, co2GPerKm) {
   const distanceKm = distanceMeters / 1000;
-  return (distanceKm * CO2_G_PER_KM) / 1000;
+  return (distanceKm * co2GPerKm) / 1000;
 }
 
 function formatCo2(kg) {
+  if (kg <= 0) {
+    return "0 g";
+  }
   if (kg < 0.1) {
     return `${Math.round(kg * 1000)} g`;
   }
@@ -95,28 +124,31 @@ function resetRoute() {
   setStatus("Click the map to set a start point.");
 }
 
-async function fetchRoute(start, end) {
+async function fetchRoute(start, end, mode) {
   if (!ORS_API_KEY) {
     throw new Error(
       "Missing VITE_ORS_API_KEY. Copy .env.example to .env and add your OpenRouteService key.",
     );
   }
 
-  const response = await fetch(ORS_DIRECTIONS_URL, {
-    method: "POST",
-    headers: {
-      Authorization: ORS_API_KEY,
-      "Content-Type": "application/json",
-      Accept:
-        "application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8",
+  const response = await fetch(
+    `${ORS_DIRECTIONS_BASE}/${mode.profile}/geojson`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: ORS_API_KEY,
+        "Content-Type": "application/json",
+        Accept:
+          "application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8",
+      },
+      body: JSON.stringify({
+        coordinates: [
+          [start.lng, start.lat],
+          [end.lng, end.lat],
+        ],
+      }),
     },
-    body: JSON.stringify({
-      coordinates: [
-        [start.lng, start.lat],
-        [end.lng, end.lat],
-      ],
-    }),
-  });
+  );
 
   const payload = await response.json().catch(() => null);
 
@@ -136,7 +168,7 @@ async function fetchRoute(start, end) {
   return feature;
 }
 
-function showRoute(feature) {
+function showRoute(feature, mode) {
   clearRouteDrawing();
 
   const latLngs = feature.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
@@ -151,14 +183,41 @@ function showRoute(feature) {
   const summary = feature.properties?.summary ?? {};
   const distance = summary.distance ?? 0;
   const duration = summary.duration ?? 0;
-  const co2Kg = calculateCo2Kg(distance);
+  const co2Kg = calculateCo2Kg(distance, mode.co2GPerKm);
 
   distanceEl.textContent = formatDistance(distance);
   durationEl.textContent = formatDuration(duration);
   co2El.textContent = formatCo2(co2Kg);
   statsEl.hidden = false;
   resetBtn.hidden = false;
-  setStatus("Route loaded from OpenRouteService.");
+  setStatus(`Route loaded (${mode.label}).`);
+}
+
+async function loadRouteForCurrentPoints() {
+  if (!startLatLng || !endLatLng) {
+    return;
+  }
+
+  const mode = getSelectedMode();
+  const token = ++fetchToken;
+  setError("");
+  setStatus(`Fetching ${mode.label.toLowerCase()} route…`);
+
+  try {
+    const feature = await fetchRoute(startLatLng, endLatLng, mode);
+    if (token !== fetchToken) {
+      return;
+    }
+    showRoute(feature, mode);
+  } catch (error) {
+    if (token !== fetchToken) {
+      return;
+    }
+    clearRouteDrawing();
+    statsEl.hidden = true;
+    setStatus("Could not load the route.");
+    setError(error.message || "Unknown routing error.");
+  }
 }
 
 async function onMapClick(event) {
@@ -175,15 +234,7 @@ async function onMapClick(event) {
   if (!endLatLng) {
     endLatLng = event.latlng;
     endMarker = L.marker(endLatLng).addTo(map).bindPopup("End").openPopup();
-    setStatus("Fetching route from OpenRouteService…");
-
-    try {
-      const feature = await fetchRoute(startLatLng, endLatLng);
-      showRoute(feature);
-    } catch (error) {
-      setStatus("Could not load the route.");
-      setError(error.message || "Unknown routing error.");
-    }
+    await loadRouteForCurrentPoints();
     return;
   }
 
@@ -196,3 +247,6 @@ async function onMapClick(event) {
 
 map.on("click", onMapClick);
 resetBtn.addEventListener("click", resetRoute);
+modeSelect.addEventListener("change", () => {
+  void loadRouteForCurrentPoints();
+});

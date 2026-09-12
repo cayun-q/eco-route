@@ -15,6 +15,15 @@
   <body>
     <aside id="panel" aria-live="polite">
       <h1>Route &amp; CO₂</h1>
+      <label class="mode-field" for="transport-mode">
+        Transport mode
+        <select id="transport-mode">
+          <option value="driving-car" selected>Driving (Car)</option>
+          <option value="driving-ev">Electric Vehicle (EV)</option>
+          <option value="cycling-regular">Bicycle</option>
+          <option value="foot-walking">Walking</option>
+        </select>
+      </label>
       <p id="status">Click the map to set a start point.</p>
       <dl id="stats" hidden>
         <div>

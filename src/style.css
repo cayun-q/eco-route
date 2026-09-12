@@ -34,6 +34,25 @@ body {
   font-size: 1.05rem;
 }
 
+.mode-field {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.mode-field select {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+  font-size: 0.9rem;
+}
+
 #status {
   margin: 0;
   font-size: 0.9rem;
