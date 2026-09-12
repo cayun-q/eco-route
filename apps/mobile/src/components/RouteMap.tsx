@@ -12,6 +12,7 @@ type Props = {
 };
 
 const CAR_ROUTE = "#2563EB";
+const EV_ROUTE = "#16A36A";
 const PLANE_ROUTE = "#D97706";
 
 function leafletHtml(
@@ -55,8 +56,8 @@ function leafletHtml(
     }).addTo(map);
     for (const leg of legs) {
       L.polyline(leg.polyline, {
-        color: leg.mode === 'car' ? '${CAR_ROUTE}' : '${PLANE_ROUTE}',
-        weight: leg.mode === 'car' ? 5 : 4,
+        color: leg.mode === 'plane' ? '${PLANE_ROUTE}' : leg.mode === 'ev' ? '${EV_ROUTE}' : '${CAR_ROUTE}',
+        weight: leg.mode === 'plane' ? 4 : 5,
         opacity: 0.94,
         smoothFactor: leg.mode === 'plane' ? 0.3 : 1,
         lineCap: 'round',
