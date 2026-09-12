@@ -15,9 +15,21 @@ export type Routed = {
 };
 
 const MAX_DRIVING_SEGMENT_KM = 80;
+const MAX_ENDPOINT_SNAP_KM = 25;
 
-function validateDrivingGeometry(route: Routed): Routed {
+function validateDrivingGeometry(route: Routed, origin: LatLng, dest: LatLng): Routed {
   if (route.polyline.length < 2) throw new Error("Driving route has no usable geometry");
+
+  const [startLat, startLng] = route.polyline[0];
+  const [endLat, endLng] = route.polyline[route.polyline.length - 1];
+  const startGapKm = haversineKm(origin, { lat: startLat, lng: startLng });
+  const endGapKm = haversineKm(dest, { lat: endLat, lng: endLng });
+
+  if (startGapKm > MAX_ENDPOINT_SNAP_KM || endGapKm > MAX_ENDPOINT_SNAP_KM) {
+    throw new Error(
+      `Driving geometry does not reach requested endpoints (start ${Math.round(startGapKm)} km, end ${Math.round(endGapKm)} km away)`,
+    );
+  }
 
   for (let i = 1; i < route.polyline.length; i += 1) {
     const [aLat, aLng] = route.polyline[i - 1];
@@ -26,6 +38,13 @@ function validateDrivingGeometry(route: Routed): Routed {
     if (gapKm > MAX_DRIVING_SEGMENT_KM) {
       throw new Error(`Driving geometry contains an implausible ${Math.round(gapKm)} km jump`);
     }
+  }
+
+  const directKm = haversineKm(origin, dest);
+  if (route.distanceKm < directKm * 0.9) {
+    throw new Error(
+      `Driving route distance is implausibly short (${Math.round(route.distanceKm)} km vs ${Math.round(directKm)} km direct)`,
+    );
   }
 
   return route;
@@ -170,7 +189,7 @@ export async function routeBetween(
 
   for (const attempt of attempts) {
     try {
-      return validateDrivingGeometry(await attempt());
+      return validateDrivingGeometry(await attempt(), origin, dest);
     } catch (err) {
       console.warn("[routing] provider failed or returned invalid driving geometry, trying next", err);
     }
