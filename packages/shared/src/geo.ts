@@ -6,13 +6,11 @@ const EARTH_KM = 6371;
 export const MODE_SPEED_KMH: Record<TransportMode, number> = {
   car: 72,
   plane: 780,
-  train: 110,
 };
 
 export const MODE_OVERHEAD_MIN: Record<TransportMode, number> = {
   car: 8,
   plane: 75,
-  train: 20,
 };
 
 function rad(deg: number): number {
@@ -55,14 +53,14 @@ function interpolateGreatCircle(a: LatLng, b: LatLng, t: number): [number, numbe
   return [deg(Math.atan2(z, Math.sqrt(x * x + y * y))), deg(Math.atan2(y, x))];
 }
 
-/** Google Maps–style path without a routing key: points along the great circle. */
+/** Smooth great-circle arc for air routes and offline fallback previews. */
 export function greatCirclePolyline(
   a: LatLng,
   b: LatLng,
-  minPoints = 12,
+  minPoints = 48,
 ): [number, number][] {
   const dist = haversineKm(a, b);
-  const steps = Math.max(minPoints, Math.ceil(dist / 22));
+  const steps = Math.max(minPoints, Math.ceil(dist / 12));
   const points: [number, number][] = [];
   for (let i = 0; i <= steps; i += 1) {
     points.push(interpolateGreatCircle(a, b, i / steps));
