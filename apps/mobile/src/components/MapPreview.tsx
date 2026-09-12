@@ -21,8 +21,24 @@ export function MapPreview({ estimate }: { estimate: RouteEstimate }) {
           destination={estimate.destination}
           polyline={estimate.polyline}
           mode={estimate.mode}
+          legs={estimate.legs}
         />
       </View>
+      {estimate.legs?.length ? (
+        <View style={styles.legs}>
+          {estimate.legs.map((leg, index) => (
+            <View key={`${leg.mode}-${index}`} style={styles.legRow}>
+              <View style={[styles.legDot, leg.mode === "car" ? styles.carDot : styles.planeDot]} />
+              <View style={styles.legCopy}>
+                <Text style={styles.legTitle}>{leg.summary ?? (leg.mode === "car" ? "Drive" : "Flight")}</Text>
+                <Text style={styles.legMeta}>
+                  {formatKm(leg.distanceKm)} · {formatDuration(leg.durationMin)}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      ) : null}
       <View style={styles.chips}>
         <Chip label={formatKm(estimate.distanceKm)} selected />
         <Chip label={formatDuration(estimate.durationMin)} selected tone="muted" />
@@ -62,8 +78,38 @@ const styles = StyleSheet.create({
     color: colors.accentText,
   },
   map: {
-    height: 260,
+    height: 300,
     backgroundColor: colors.white,
+  },
+  legs: {
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+  },
+  legRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  legDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  carDot: { backgroundColor: "#2563EB" },
+  planeDot: { backgroundColor: "#D97706" },
+  legCopy: { flex: 1 },
+  legTitle: {
+    fontFamily: font.bodyMed,
+    fontSize: 13,
+    color: colors.ink,
+  },
+  legMeta: {
+    fontFamily: font.body,
+    fontSize: 12,
+    color: colors.muted,
   },
   chips: {
     flexDirection: "row",
