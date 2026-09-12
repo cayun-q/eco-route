@@ -25,9 +25,12 @@ export function MapPreview({ estimate }: { estimate: RouteEstimate }) {
         <View style={styles.legs}>
           {estimate.legs.map((leg, index) => (
             <View key={`${leg.mode}-${index}`} style={styles.legRow}>
-              <View style={[styles.legDot, leg.mode === "car" ? styles.carDot : styles.planeDot]} />
+              <View style={[
+                styles.legDot,
+                leg.mode === "plane" ? styles.planeDot : leg.mode === "ev" ? styles.evDot : styles.carDot,
+              ]} />
               <View style={styles.legCopy}>
-                <Text style={styles.legTitle}>{leg.summary ?? (leg.mode === "car" ? "Drive" : "Flight")}</Text>
+                <Text style={styles.legTitle}>{leg.summary ?? (leg.mode === "plane" ? "Flight" : leg.mode === "ev" ? "Electric drive" : "Drive")}</Text>
                 <Text style={styles.legMeta}>{formatKm(leg.distanceKm, measurementSystem, displayPrecision)} · {formatDuration(leg.durationMin)}</Text>
               </View>
             </View>
@@ -54,7 +57,7 @@ function makeStyles(colors: ThemeColors) {
     legs: { paddingHorizontal: space.md, paddingVertical: space.sm, gap: 8, borderTopWidth: 1, borderTopColor: colors.line },
     legRow: { flexDirection: "row", alignItems: "center", gap: 10 },
     legDot: { width: 10, height: 10, borderRadius: 5 },
-    carDot: { backgroundColor: "#2563EB" }, planeDot: { backgroundColor: "#D97706" }, legCopy: { flex: 1 },
+    carDot: { backgroundColor: "#2563EB" }, evDot: { backgroundColor: "#16A36A" }, planeDot: { backgroundColor: "#D97706" }, legCopy: { flex: 1 },
     legTitle: { fontFamily: font.bodyMed, fontSize: 13, color: colors.ink }, legMeta: { fontFamily: font.body, fontSize: 12, color: colors.muted },
     chips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm, padding: space.md, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.line },
   });
