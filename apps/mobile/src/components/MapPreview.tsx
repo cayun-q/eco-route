@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 import type { RouteEstimate } from "@carbonroute/shared";
 import { colors, radius, shadow, space, type as font } from "../theme";
-import { formatDuration, formatKg, formatKm } from "../format";
+import { formatDuration, formatKg, formatKm, placeDisplayLabel } from "../format";
 import { Chip } from "../ui";
 import { RouteMap } from "./RouteMap";
 
@@ -12,7 +12,7 @@ export function MapPreview({ estimate }: { estimate: RouteEstimate }) {
       <View style={styles.bar}>
         <Text style={styles.barKicker}>Route preview</Text>
         <Text style={styles.barTitle} numberOfLines={1}>
-          {estimate.origin.label.split(",")[0]} → {estimate.destination.label.split(",")[0]}
+          {placeDisplayLabel(estimate.origin.label)} → {placeDisplayLabel(estimate.destination.label)}
         </Text>
       </View>
       <View style={styles.map}>
