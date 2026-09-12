@@ -1,4 +1,4 @@
-import type { EmissionFactor, RouteEstimate, TransportMode, Trip, TripInput, TripStats } from "@carbonroute/shared";
+import type { EmissionFactor, Place, RouteEstimate, TransportMode, Trip, TripInput, TripStats } from "@carbonroute/shared";
 
 const BASE = (process.env.EXPO_PUBLIC_API_URL ?? "http://127.0.0.1:43124").replace(/\/$/, "");
 
@@ -20,6 +20,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   health: () => request<{ ok: boolean }>("/api/health"),
   factors: () => request<{ factors: EmissionFactor[] }>("/api/factors"),
+  searchPlaces: (query: string) =>
+    request<{ places: Place[] }>(`/api/geocode/search?q=${encodeURIComponent(query)}`),
   estimate: (body: { origin: string; destination: string; mode: TransportMode }) =>
     request<RouteEstimate>("/api/routes/estimate", {
       method: "POST",
