@@ -11,8 +11,7 @@
   },
   "dependencies": {
     "@carbonroute/shared": "file:../../packages/shared",
-    "@expo-google-fonts/fraunces": "^0.4.1",
-    "@expo-google-fonts/ibm-plex-sans": "^0.4.1",
+    "@expo-google-fonts/dm-sans": "^0.4.2",
     "@expo/metro-runtime": "~57.0.15",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/native": "^7.1.17",

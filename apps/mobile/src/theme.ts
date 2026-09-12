@@ -37,11 +37,11 @@ export const radius = {
 } as const;
 
 export const type = {
-  display: "Fraunces_600SemiBold",
-  displayItalic: "Fraunces_600SemiBold_Italic",
-  body: "IBMPlexSans_400Regular",
-  bodyMed: "IBMPlexSans_500Medium",
-  bodyBold: "IBMPlexSans_600SemiBold",
+  display: "DMSans_600SemiBold",
+  displayItalic: "DMSans_600SemiBold_Italic",
+  body: "DMSans_400Regular",
+  bodyMed: "DMSans_500Medium",
+  bodyBold: "DMSans_600SemiBold",
 } as const;
 
 export const shadow = {
@@ -55,6 +55,6 @@ export const shadow = {
 } as const;
 
 export const fontsFallback = {
-  display: "Georgia",
+  display: "system-ui",
   body: "system-ui",
 };
