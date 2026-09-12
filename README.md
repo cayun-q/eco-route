@@ -19,14 +19,14 @@ score           = round(30 + 70 × (1 − severity))   // clamped to 30–100
 
 Petrol car no longer scores 0 — the floor is **30**. Longer, dirtier trips land nearer that floor; bike/walk stay near **100**.
 
+Carbon intensity baselines live in `src/carbonBaselines.js` (g CO₂e / km per mode). Scoring uses `calculateEcoScore(mode, distanceKm)` in `src/ecoScore.js`.
+
 | Mode | Intensity | ~20 km score |
 | --- | --- | --- |
-| Driving (Car) | 171 g/km | 30 |
-| Electric Vehicle (EV) | 45 g/km | ~82 |
-| Bicycle | 0 g/km | 100 |
-| Walking | 0 g/km | 100 |
-
-Core API: `calculateEcoScore(mode, distanceKm)` in `src/ecoScore.js`.
+| Driving (Car) | 171 g CO₂e/km | 30 |
+| Electric Vehicle (EV) | 45 g CO₂e/km | ~82 |
+| Bicycle | 0 g CO₂e/km | 100 |
+| Walking | 0 g CO₂e/km | 100 |
 
 ## Run
 

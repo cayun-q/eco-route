@@ -1,8 +1,5 @@
-import {
-  calculateEcoScore,
-  estimateTripCo2Grams,
-  MODE_CO2_G_PER_KM,
-} from "./ecoScore.js";
+import { GRAMS_CO2E_PER_KM } from "./carbonBaselines.js";
+import { calculateEcoScore, estimateTripCo2Grams } from "./ecoScore.js";
 
 const form = document.getElementById("eco-form");
 const startInput = document.getElementById("start-location");
@@ -97,7 +94,7 @@ async function geocode(query) {
 
 function renderScore({ mode, distanceKm }) {
   const score = calculateEcoScore(mode, distanceKm);
-  const intensity = MODE_CO2_G_PER_KM[mode] ?? 0;
+  const intensity = GRAMS_CO2E_PER_KM[mode] ?? 0;
   const tripCo2 = estimateTripCo2Grams(mode, distanceKm);
 
   scoreEl.textContent = String(score);
