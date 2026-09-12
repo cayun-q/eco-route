@@ -11,8 +11,8 @@ export function AboutScreen() {
         <Heading>About Luma</Heading>
         <Muted>Plan a trip, understand its passenger carbon footprint, and keep a simple ledger of the journeys you take.</Muted>
 
-        <View style={styles.artCard}>
-          <Image source={aboutArt} style={styles.art} resizeMode="contain" />
+        <View style={styles.wordmarkFrame}>
+          <Image source={aboutArt} style={styles.wordmark} resizeMode="cover" />
         </View>
 
         <View style={styles.copyCard}>
@@ -39,18 +39,17 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     gap: space.lg,
   },
-  artCard: {
-    minHeight: 300,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radius.card,
-    overflow: "hidden",
-    backgroundColor: colors.surface,
-    padding: space.sm,
-  },
-  art: {
+  wordmarkFrame: {
+    height: 118,
     width: "100%",
-    height: 420,
+    overflow: "hidden",
+    borderRadius: radius.card,
+    backgroundColor: colors.bg,
+  },
+  wordmark: {
+    width: "100%",
+    height: "100%",
+    transform: [{ scale: 1.18 }],
   },
   copyCard: {
     backgroundColor: colors.surface,
@@ -63,7 +62,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: font.display,
     fontSize: 22,
-    color: colors.ink,
+    color: colors.accentText,
   },
   body: {
     fontFamily: font.body,
