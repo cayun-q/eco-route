@@ -18,7 +18,7 @@ const legSchema = z.object({
   distanceKm: z.number().nonnegative(),
   durationMin: z.number().int().nonnegative(),
   polyline: z.array(z.tuple([z.number(), z.number()])).min(2),
-  provider: z.enum(["haversine", "mapbox", "google", "ors", "osrm", "openflights"]),
+  provider: z.enum(["haversine", "mapbox", "google", "ors", "osrm", "openflights", "estimated"]),
   summary: z.string().max(300).optional(),
 });
 
@@ -66,9 +66,7 @@ tripsRouter.get("/", async (_req, res, next) => {
   try {
     const { rows } = await pool.query("SELECT * FROM trips ORDER BY created_at DESC LIMIT 100");
     res.json({ trips: rows.map(mapTrip) });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
 tripsRouter.post("/", async (req, res, next) => {
@@ -84,64 +82,32 @@ tripsRouter.post("/", async (req, res, next) => {
         origin_label, destination_label, origin_lat, origin_lng,
         dest_lat, dest_lng, mode, log_method, distance_km, duration_min, co2e_kg,
         polyline, legs, factor_g_per_km, factor_source
-      ) VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13::jsonb,$14,$15
-      ) RETURNING *`,
-      [
-        t.originLabel,
-        t.destinationLabel,
-        t.originLat,
-        t.originLng,
-        t.destLat,
-        t.destLng,
-        t.mode,
-        t.logMethod,
-        t.distanceKm,
-        t.durationMin,
-        t.co2eKg,
-        JSON.stringify(t.polyline),
-        t.legs ? JSON.stringify(t.legs) : null,
-        t.factorGPerKm,
-        t.factorSource,
-      ],
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13::jsonb,$14,$15) RETURNING *`,
+      [t.originLabel, t.destinationLabel, t.originLat, t.originLng, t.destLat, t.destLng, t.mode, t.logMethod, t.distanceKm, t.durationMin, t.co2eKg, JSON.stringify(t.polyline), t.legs ? JSON.stringify(t.legs) : null, t.factorGPerKm, t.factorSource],
     );
     res.status(201).json({ trip: mapTrip(rows[0]) });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
 tripsRouter.delete("/", async (_req, res, next) => {
   try {
     const result = await pool.query("DELETE FROM trips");
     res.json({ deleted: result.rowCount ?? 0 });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
 tripsRouter.get("/:id", async (req, res, next) => {
   try {
     const { rows } = await pool.query("SELECT * FROM trips WHERE id = $1", [req.params.id]);
-    if (!rows[0]) {
-      res.status(404).json({ error: "Trip not found." });
-      return;
-    }
+    if (!rows[0]) { res.status(404).json({ error: "Trip not found." }); return; }
     res.json({ trip: mapTrip(rows[0]) });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
 tripsRouter.delete("/:id", async (req, res, next) => {
   try {
     const result = await pool.query("DELETE FROM trips WHERE id = $1", [req.params.id]);
-    if (!result.rowCount) {
-      res.status(404).json({ error: "Trip not found." });
-      return;
-    }
+    if (!result.rowCount) { res.status(404).json({ error: "Trip not found." }); return; }
     res.json({ deleted: true });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
