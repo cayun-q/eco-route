@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { Place, TransportMode } from "@carbonroute/shared";
 import { colors } from "../theme";
 
@@ -22,85 +22,171 @@ function loadCss(href: string) {
   document.head.appendChild(link);
 }
 
-function loadScript(src: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) {
-      resolve();
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = src;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("leaflet failed"));
-    document.head.appendChild(script);
-  });
-}
+type MapLike = {
+  fitBounds: (b: unknown, o: object) => void;
+  invalidateSize: () => void;
+  removeLayer: (layer: unknown) => void;
+  remove: () => void;
+};
+
+type PolylineLike = {
+  addTo: (m: unknown) => PolylineLike;
+  getBounds: () => unknown;
+  setLatLngs: (pts: [number, number][]) => PolylineLike;
+  setStyle: (o: object) => PolylineLike;
+};
+
+type MarkerLike = {
+  addTo: (m: unknown) => MarkerLike;
+  setLatLng: (ll: [number, number]) => MarkerLike;
+};
 
 type LeafletLike = {
-  map: (el: HTMLElement, opts: object) => {
-    fitBounds: (b: unknown, o: object) => void;
-    invalidateSize: () => void;
-    remove: () => void;
-  };
+  map: (el: HTMLElement, opts: object) => MapLike;
   tileLayer: (u: string, o: object) => { addTo: (m: unknown) => void };
-  polyline: (pts: [number, number][], o: object) => { addTo: (m: unknown) => unknown; getBounds: () => unknown };
+  polyline: (pts: [number, number][], o: object) => PolylineLike;
   divIcon: (o: object) => unknown;
-  marker: (ll: [number, number], o: object) => { addTo: (m: unknown) => void };
+  marker: (ll: [number, number], o: object) => MarkerLike;
 };
+
+let leafletPromise: Promise<LeafletLike> | null = null;
+
+function loadLeaflet(): Promise<LeafletLike> {
+  const existing = (globalThis as { L?: LeafletLike }).L;
+  if (existing) return Promise.resolve(existing);
+  if (leafletPromise) return leafletPromise;
+
+  leafletPromise = new Promise((resolve, reject) => {
+    loadCss(LEAFLET_CSS);
+    const finish = () => {
+      const L = (globalThis as { L?: LeafletLike }).L;
+      if (L) resolve(L);
+      else reject(new Error("Leaflet loaded without global L"));
+    };
+
+    const existingScript = document.querySelector(`script[src="${LEAFLET_JS}"]`) as HTMLScriptElement | null;
+    if (existingScript) {
+      existingScript.addEventListener("load", finish, { once: true });
+      existingScript.addEventListener("error", () => reject(new Error("Leaflet failed")), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = LEAFLET_JS;
+    script.async = true;
+    script.onload = finish;
+    script.onerror = () => reject(new Error("Leaflet failed"));
+    document.head.appendChild(script);
+  });
+
+  return leafletPromise;
+}
 
 export function RouteMap({ origin, destination, polyline, mode }: Props) {
   const rawId = useId().replace(/[^a-zA-Z0-9]/g, "");
   const id = `cr-map-${rawId}`;
-  const mapRef = useRef<{ remove: () => void } | null>(null);
+  const mapRef = useRef<MapLike | null>(null);
+  const leafletRef = useRef<LeafletLike | null>(null);
+  const lineRef = useRef<PolylineLike | null>(null);
+  const originMarkerRef = useRef<MarkerLike | null>(null);
+  const destinationMarkerRef = useRef<MarkerLike | null>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!polyline.length) return;
     let cancelled = false;
+
     (async () => {
-      loadCss(LEAFLET_CSS);
-      await loadScript(LEAFLET_JS);
+      const L = await loadLeaflet();
       if (cancelled) return;
-      const L = (globalThis as { L?: LeafletLike }).L;
       const el = document.getElementById(id);
-      if (!L || !el) return;
-      mapRef.current?.remove();
-      const map = L.map(el, { zoomControl: true, attributionControl: true });
+      if (!el) return;
+
+      const map = L.map(el, {
+        zoomControl: true,
+        attributionControl: true,
+        preferCanvas: true,
+        wheelDebounceTime: 50,
+      });
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "&copy; OpenStreetMap",
         maxZoom: 18,
+        updateWhenIdle: true,
+        updateWhenZooming: false,
+        keepBuffer: 3,
       }).addTo(map);
-      const line = L.polyline(polyline, {
-        color: mode === "car" ? CAR_ROUTE : PLANE_ROUTE,
-        weight: mode === "car" ? 5 : 4,
-        opacity: 0.94,
-        smoothFactor: mode === "plane" ? 0.35 : 1,
-        lineCap: "round",
-        lineJoin: "round",
-      }).addTo(map);
-      const iconA = L.divIcon({
-        className: "",
-        html: `<div style="width:14px;height:14px;background:${colors.accent};border:2px solid ${colors.white};box-shadow:2px 2px 0 ${colors.ink}29;border-radius:50%"></div>`,
-        iconSize: [14, 14],
-        iconAnchor: [7, 7],
-      });
-      const iconB = L.divIcon({
-        className: "",
-        html: `<div style="width:14px;height:14px;background:${colors.clay};border:2px solid ${colors.white};box-shadow:2px 2px 0 ${colors.ink}29;border-radius:50%"></div>`,
-        iconSize: [14, 14],
-        iconAnchor: [7, 7],
-      });
-      L.marker([origin.lat, origin.lng], { icon: iconA, title: origin.label }).addTo(map);
-      L.marker([destination.lat, destination.lng], { icon: iconB, title: destination.label }).addTo(map);
-      map.fitBounds(line.getBounds(), { padding: [28, 28] });
+
+      leafletRef.current = L;
       mapRef.current = map;
-      setTimeout(() => map.invalidateSize(), 80);
+      setReady(true);
+      requestAnimationFrame(() => map.invalidateSize());
     })().catch(() => undefined);
+
     return () => {
       cancelled = true;
+      setReady(false);
+      lineRef.current = null;
+      originMarkerRef.current = null;
+      destinationMarkerRef.current = null;
       mapRef.current?.remove();
       mapRef.current = null;
+      leafletRef.current = null;
     };
-  }, [id, origin, destination, polyline, mode]);
+  }, [id]);
+
+  useEffect(() => {
+    if (!ready || !polyline.length) return;
+    const L = leafletRef.current;
+    const map = mapRef.current;
+    if (!L || !map) return;
+
+    const lineStyle = {
+      color: mode === "car" ? CAR_ROUTE : PLANE_ROUTE,
+      weight: mode === "car" ? 5 : 4,
+      opacity: 0.94,
+      smoothFactor: mode === "plane" ? 0.3 : 1,
+      lineCap: "round",
+      lineJoin: "round",
+    };
+
+    let line = lineRef.current;
+    if (!line) {
+      line = L.polyline(polyline, lineStyle).addTo(map);
+      lineRef.current = line;
+    } else {
+      line.setLatLngs(polyline).setStyle(lineStyle);
+    }
+
+    const iconA = L.divIcon({
+      className: "",
+      html: `<div style="width:14px;height:14px;background:${colors.accent};border:2px solid ${colors.white};box-shadow:2px 2px 0 ${colors.ink}29;border-radius:50%"></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+    });
+    const iconB = L.divIcon({
+      className: "",
+      html: `<div style="width:14px;height:14px;background:${colors.clay};border:2px solid ${colors.white};box-shadow:2px 2px 0 ${colors.ink}29;border-radius:50%"></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+    });
+
+    if (!originMarkerRef.current) {
+      originMarkerRef.current = L.marker([origin.lat, origin.lng], { icon: iconA, title: origin.label }).addTo(map);
+    } else {
+      originMarkerRef.current.setLatLng([origin.lat, origin.lng]);
+    }
+
+    if (!destinationMarkerRef.current) {
+      destinationMarkerRef.current = L.marker([destination.lat, destination.lng], {
+        icon: iconB,
+        title: destination.label,
+      }).addTo(map);
+    } else {
+      destinationMarkerRef.current.setLatLng([destination.lat, destination.lng]);
+    }
+
+    map.fitBounds(line.getBounds(), { padding: [28, 28] });
+    requestAnimationFrame(() => map.invalidateSize());
+  }, [ready, origin.lat, origin.lng, origin.label, destination.lat, destination.lng, destination.label, polyline, mode]);
 
   return <div id={id} style={{ width: "100%", height: "100%", background: colors.white }} />;
 }
