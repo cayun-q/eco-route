@@ -108,6 +108,15 @@ function AddressSearch({ label, value, onChange, placeholder }: AddressSearchPro
   );
 }
 
+function isHardRoutingError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : "";
+  return (
+    message.includes("No drivable route exists") ||
+    message.includes("No usable airport connection") ||
+    message.includes("Airport data is unavailable")
+  );
+}
+
 export function LogTripScreen({ navigation }: Props) {
   const { factors, saveTrip } = useStore();
   const [origin, setOrigin] = useState("");
@@ -140,10 +149,16 @@ export function LogTripScreen({ navigation }: Props) {
         });
         if (!cancelled) setEstimate(result);
       } catch (err) {
-        if (mode === "plane") {
+        if (mode === "plane" || isHardRoutingError(err)) {
           if (!cancelled) {
             setEstimate(null);
-            setEstimateError(err instanceof Error ? err.message : "Could not build an airport itinerary.");
+            setEstimateError(
+              err instanceof Error
+                ? err.message
+                : mode === "plane"
+                  ? "Could not build an airport itinerary."
+                  : "No drivable route exists between these locations.",
+            );
           }
         } else {
           try {
