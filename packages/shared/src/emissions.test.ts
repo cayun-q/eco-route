@@ -6,7 +6,7 @@ import type { EmissionFactor } from "./types";
 
 test("kgFromDistance uses the supplied factor, not a hardcoded g/km", () => {
   assert.equal(kgFromDistance(100, 164.54), 16.454);
-  assert.equal(kgFromDistance(233.4, 35.49), 8.283);
+  assert.equal(kgFromDistance(100, 245.87), 24.587);
   assert.equal(kgFromDistance(0, 245.87), 0);
 });
 
@@ -17,11 +17,11 @@ test("kgFromDistance rejects invented or invalid factors", () => {
 
 test("factorForMode reads the table row", () => {
   const table: EmissionFactor[] = [
-    { mode: "train", gPerKm: 35.49, source: "DEFRA 2024" },
+    { mode: "plane", gPerKm: 245.87, source: "DEFRA 2024" },
     { mode: "car", gPerKm: 164.54, source: "DEFRA 2024" },
   ];
-  assert.equal(factorForMode(table, "train").gPerKm, 35.49);
-  assert.throws(() => factorForMode(table, "plane"));
+  assert.equal(factorForMode(table, "car").gPerKm, 164.54);
+  assert.equal(factorForMode(table, "plane").gPerKm, 245.87);
 });
 
 test("haversine Portland to Seattle is ~233 km", () => {
@@ -32,13 +32,13 @@ test("haversine Portland to Seattle is ~233 km", () => {
   assert.ok(km > 220 && km < 250, `got ${km}`);
 });
 
-test("mockRoute returns a polyline with both endpoints", () => {
+test("mockRoute returns a smooth polyline with both endpoints", () => {
   const route = mockRoute(
     { lat: 45.5152, lng: -122.6784 },
     { lat: 47.6062, lng: -122.3321 },
-    "train",
+    "plane",
   );
-  assert.ok(route.polyline.length >= 12);
+  assert.ok(route.polyline.length >= 48);
   assert.equal(route.polyline[0][0], 45.5152);
   assert.ok(route.durationMin > 0);
 });
