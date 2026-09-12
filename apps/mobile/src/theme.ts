@@ -16,6 +16,7 @@ export const lightColors = {
   white: "#FFFFFF",
   mode: {
     car: "#3F7658",
+    ev: "#23845D",
     plane: "#B06A45",
     train: "#45666A",
   },
@@ -39,6 +40,7 @@ export const darkColors = {
   white: "#FFFFFF",
   mode: {
     car: "#5E9B73",
+    ev: "#53B987",
     plane: "#C98665",
     train: "#7A9299",
   },
