@@ -17,11 +17,14 @@ const bodySchema = z.object({
 });
 
 function leadingIata(value: string): string | null {
-  const match = value.trim().match(/^([A-Za-z]{3})(?=\s|[-—–]|$)/);
+  const match = value.trim().match(/^([A-Za-z]{3})/);
   return match ? match[1].toUpperCase() : null;
 }
 
 async function resolveDirectFlightPlace(value: string): Promise<Place> {
+  // Manual flight inputs may contain the full autocomplete display label.
+  // Always try the first three letters as an IATA code first, e.g.
+  // "AUS — Austin-Bergstrom International Airport, Austin" -> AUS.
   const code = leadingIata(value);
   if (code) {
     const airport = await lookupAirportByIata(code);
