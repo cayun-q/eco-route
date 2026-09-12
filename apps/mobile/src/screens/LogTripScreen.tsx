@@ -13,7 +13,6 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { Place, RouteEstimate, TransportMode } from "@carbonroute/shared";
 import type { RootStackParamList } from "../navigation";
 import { api } from "../api";
-import { offlineEstimate } from "../offline";
 import { useStore } from "../store";
 import { colors, space, type as font } from "../theme";
 import { Button, Chip, Field, Heading, Muted, Screen } from "../ui";
@@ -113,17 +112,8 @@ function isNoRoadError(err: unknown): boolean {
   return err instanceof Error && err.message.includes("No drivable route exists");
 }
 
-function isHardRoutingError(err: unknown): boolean {
-  const message = err instanceof Error ? err.message : "";
-  return (
-    message.includes("No drivable route exists") ||
-    message.includes("No usable airport connection") ||
-    message.includes("Airport data is unavailable")
-  );
-}
-
 export function LogTripScreen({ navigation }: Props) {
-  const { factors, saveTrip } = useStore();
+  const { saveTrip } = useStore();
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
   const [mode, setMode] = useState<TransportMode>("car");
@@ -159,6 +149,7 @@ export function LogTripScreen({ navigation }: Props) {
           setMode((current) => (current === "car" ? "plane" : current));
           setEstimate((current) => (current?.mode === "car" ? null : current));
         } else {
+          // Unknown/network failures must never manufacture a fake road route.
           setCarStatus("idle");
         }
       }
@@ -196,27 +187,15 @@ export function LogTripScreen({ navigation }: Props) {
         });
         if (!cancelled) setEstimate(result);
       } catch (err) {
-        if (mode === "plane" || isHardRoutingError(err)) {
-          if (!cancelled) {
-            setEstimate(null);
-            setEstimateError(
-              err instanceof Error
-                ? err.message
-                : mode === "plane"
-                  ? "Could not build an airport itinerary."
-                  : "No drivable route exists between these locations.",
-            );
-          }
-        } else {
-          try {
-            const fallback = offlineEstimate(origin.trim(), destination.trim(), mode, factors);
-            if (!cancelled) setEstimate(fallback);
-          } catch {
-            if (!cancelled) {
-              setEstimate(null);
-              setEstimateError(err instanceof Error ? err.message : "Could not preview this route.");
-            }
-          }
+        if (!cancelled) {
+          setEstimate(null);
+          setEstimateError(
+            err instanceof Error
+              ? err.message
+              : mode === "plane"
+                ? "Could not build an airport itinerary."
+                : "Could not verify a real drivable route for these locations.",
+          );
         }
       } finally {
         if (!cancelled) setEstimating(false);
@@ -226,7 +205,7 @@ export function LogTripScreen({ navigation }: Props) {
       cancelled = true;
       clearTimeout(handle);
     };
-  }, [origin, destination, mode, bothEnds, factors, carStatus]);
+  }, [origin, destination, mode, bothEnds, carStatus]);
 
   const compare = useMemo(() => vsDrivingCopy(estimate?.vsDrivingKg), [estimate]);
 
@@ -323,7 +302,7 @@ export function LogTripScreen({ navigation }: Props) {
               <Text style={styles.factor}>
                 {estimate.legs?.length
                   ? `Multimodal estimate · airport network + road routing`
-                  : `${estimate.factor.gPerKm} g/km · ${estimate.factor.source}${estimate.offline ? " · offline cache" : ` · ${estimate.provider}`}`}
+                  : `${estimate.factor.gPerKm} g/km · ${estimate.factor.source} · ${estimate.provider}`}
               </Text>
               {compare ? <Text style={styles.compare}>{compare}</Text> : null}
             </View>
