@@ -18,11 +18,12 @@ export function TripDetailScreen({ navigation, route }: Props) {
     distanceKm: trip.distanceKm,
     durationMin: trip.durationMin,
     polyline: trip.polyline,
+    legs: trip.legs,
     co2eKg: trip.co2eKg,
     factor: { mode: trip.mode, gPerKm: trip.factorGPerKm, source: trip.factorSource },
     drivingCo2eKg: null,
     vsDrivingKg: null,
-    provider: "haversine",
+    provider: trip.legs?.some((leg) => leg.mode === "plane") ? "haversine" : "osrm",
   };
 
   return (
@@ -32,13 +33,14 @@ export function TripDetailScreen({ navigation, route }: Props) {
           {trip.originLabel.split(",")[0]} → {trip.destinationLabel.split(",")[0]}
         </Heading>
         <Muted>
-          {modeLabel(trip.mode)} · {formatDate(trip.createdAt)}
+          {trip.logMethod === "manual" ? "Manual itinerary" : modeLabel(trip.mode)} · {formatDate(trip.createdAt)}
           {trip.pending ? " · queued" : ""}
         </Muted>
 
         <MapPreview estimate={estimate} />
 
         <View style={styles.rows}>
+          <Row k="Logging" v={trip.logMethod === "manual" ? "Manual itinerary" : "Automatic"} />
           <Row k="Distance" v={formatKm(trip.distanceKm)} />
           <Row k="Duration" v={formatDuration(trip.durationMin)} />
           <Row k="CO₂e" v={formatKg(trip.co2eKg)} />
