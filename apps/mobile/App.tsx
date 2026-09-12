@@ -17,6 +17,7 @@ import { ResultsScreen } from "./src/screens/ResultsScreen";
 import { TripDetailScreen } from "./src/screens/TripDetailScreen";
 import { AboutScreen } from "./src/screens/AboutScreen";
 import { CreditsScreen } from "./src/screens/CreditsScreen";
+import { SettingsScreen } from "./src/screens/SettingsScreen";
 import { LumaMenuButton } from "./src/components/LumaMenu";
 import { colors, type as font } from "./src/theme";
 
@@ -85,6 +86,7 @@ export default function App() {
             <Stack.Screen name="LogTrip" component={LogTripScreen} options={{ title: "Log trip" }} />
             <Stack.Screen name="Results" component={ResultsScreen} options={{ title: "Results" }} />
             <Stack.Screen name="TripDetail" component={TripDetailScreen} options={{ title: "Trip" }} />
+            <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: "Settings" }} />
             <Stack.Screen name="About" component={AboutScreen} options={{ title: "About Luma" }} />
             <Stack.Screen name="Credits" component={CreditsScreen} options={{ title: "Credits" }} />
           </Stack.Navigator>
