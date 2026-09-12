@@ -1,5 +1,6 @@
 export const MODES = ["car", "plane"] as const;
 export type TransportMode = (typeof MODES)[number];
+export type LogMethod = "automatic" | "manual";
 
 export type LatLng = {
   lat: number;
@@ -56,10 +57,12 @@ export type Trip = {
   destLat: number;
   destLng: number;
   mode: TransportMode;
+  logMethod?: LogMethod;
   distanceKm: number;
   durationMin: number;
   co2eKg: number;
   polyline: [number, number][];
+  legs?: RouteLeg[];
   factorGPerKm: number;
   factorSource: string;
   pending?: boolean;
@@ -74,10 +77,12 @@ export type TripInput = {
   destLat: number;
   destLng: number;
   mode: TransportMode;
+  logMethod?: LogMethod;
   distanceKm: number;
   durationMin: number;
   co2eKg: number;
   polyline: [number, number][];
+  legs?: RouteLeg[];
   factorGPerKm: number;
   factorSource: string;
 };
