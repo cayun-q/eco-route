@@ -5,7 +5,7 @@ import type { RouteEstimate } from "@carbonroute/shared";
 import { colors, space, type as font } from "../theme";
 import { Button, Heading, Muted, Screen } from "../ui";
 import { MapPreview } from "../components/MapPreview";
-import { formatKg, modeLabel } from "../format";
+import { formatKg, modeLabel, placeDisplayLabel } from "../format";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Results">;
 
@@ -32,7 +32,7 @@ export function ResultsScreen({ navigation, route }: Props) {
         <Text style={styles.kicker}>{trip.pending ? "Queued on device" : "On the ledger"}</Text>
         <Heading>{trip.logMethod === "manual" ? "Itinerary logged" : "Trip logged"}</Heading>
         <Muted>
-          {trip.logMethod === "manual" ? "Manual itinerary" : modeLabel(trip.mode)} from {trip.originLabel.split(",")[0]} to {trip.destinationLabel.split(",")[0]}.
+          {trip.logMethod === "manual" ? "Manual itinerary" : modeLabel(trip.mode)} from {placeDisplayLabel(trip.originLabel)} to {placeDisplayLabel(trip.destinationLabel)}.
         </Muted>
 
         <View style={styles.hero}>
