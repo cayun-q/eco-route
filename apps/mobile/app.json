@@ -2,46 +2,36 @@
   "expo": {
     "name": "CarbonRoute",
     "slug": "carbonroute",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "scheme": "carbonroute",
     "splash": {
-      "image": "./assets/icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#F3F6F1"
+      "backgroundColor": "#F2EEE4"
     },
     "ios": {
       "supportsTablet": true,
-      "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "CarbonRoute uses your location to fill the trip origin."
-      }
+      "bundleIdentifier": "com.carbonroute.app"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#1B7A4E",
+        "backgroundColor": "#F2EEE4",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "permissions": [
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
-      ],
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.carbonroute.app"
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
+    "extra": {
+      "apiUrl": "http://127.0.0.1:43124"
+    },
     "plugins": [
-      [
-        "expo-location",
-        {
-          "locationWhenInUsePermission": "Allow CarbonRoute to use your location as the trip origin."
-        }
-      ]
+      "expo-font"
     ]
   }
 }
