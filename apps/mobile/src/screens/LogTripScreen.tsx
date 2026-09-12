@@ -15,7 +15,8 @@ import { api } from "../api";
 import { offlineEstimate } from "../offline";
 import { useStore } from "../store";
 import { colors, space, type as font } from "../theme";
-import { Button, Chip, Field, Heading, Muted, Screen } from "../ui";
+import { Button, Chip, Heading, Muted, Screen } from "../ui";
+import { PlaceSearch } from "../components/PlaceSearch";
 import { MapPreview } from "../components/MapPreview";
 import { vsDrivingCopy } from "../format";
 
@@ -111,19 +112,17 @@ export function LogTripScreen({ navigation }: Props) {
           <Heading>Log trip</Heading>
           <Muted>Enter origin and destination first. The map appears only after both ends are set.</Muted>
 
-          <Field
+          <PlaceSearch
             label="Origin"
             value={origin}
             onChangeText={setOrigin}
             placeholder="Portland, OR"
-            autoCapitalize="words"
           />
-          <Field
+          <PlaceSearch
             label="Destination"
             value={destination}
             onChangeText={setDestination}
             placeholder="Seattle, WA"
-            autoCapitalize="words"
           />
 
           <Text style={styles.modeLabel}>Mode</Text>
