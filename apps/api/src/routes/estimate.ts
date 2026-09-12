@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { MODES, type Place } from "@carbonroute/shared";
+import { MODES, type Place, type TransportMode } from "@carbonroute/shared";
 import { geocode, GeocodeError } from "../services/geocode";
 import { routeBetween } from "../services/routing";
 import { emissionsFor } from "../services/emissions";
@@ -50,7 +50,7 @@ estimateRouter.post("/", async (req, res, next) => {
   try {
     const parsed = bodySchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ error: "origin, destination, and mode (car|plane) are required." });
+      res.status(400).json({ error: "origin, destination, and mode (car|ev|plane) are required." });
       return;
     }
     const { origin: originQ, destination: destQ, mode, direct } = parsed.data;
@@ -98,14 +98,17 @@ estimateRouter.post("/", async (req, res, next) => {
       return;
     }
 
+    // Electric cars use the same road geometry as cars; only the emissions
+    // factor differs. routeBetween routes every non-plane road mode through
+    // the real road-routing provider chain.
     const routed = await routeBetween(origin, destination, mode);
     const emissions = await emissionsFor(mode, routed.distanceKm);
 
-    let comparisonMode: "car" | "plane" | null = null;
+    let comparisonMode: TransportMode | null = null;
     let comparisonCo2eKg: number | null = null;
     let vsComparisonKg: number | null = null;
 
-    if (mode === "car") {
+    if (mode === "car" || mode === "ev") {
       try {
         const plane = await planeJourneyEmissions(origin, destination);
         comparisonMode = "plane";
