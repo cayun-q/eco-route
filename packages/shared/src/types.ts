@@ -1,4 +1,4 @@
-export const MODES = ["car", "plane", "train"] as const;
+export const MODES = ["car", "plane"] as const;
 export type TransportMode = (typeof MODES)[number];
 
 export type LatLng = {
@@ -18,7 +18,7 @@ export type EmissionFactor = {
   updatedAt?: string;
 };
 
-export type RouteProvider = "haversine" | "mapbox" | "google" | "ors";
+export type RouteProvider = "haversine" | "mapbox" | "google" | "ors" | "osrm";
 
 export type RouteEstimate = {
   origin: Place;
