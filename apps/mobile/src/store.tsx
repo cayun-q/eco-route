@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { EmissionFactor, Trip, TripInput, TripStats } from "@carbonroute/shared";
-import type { MeasurementSystem } from "./format";
+import { setDefaultMeasurementSystem, type MeasurementSystem } from "./format";
 import { api } from "./api";
 import {
   cacheFactors,
@@ -61,11 +61,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void AsyncStorage.getItem(SETTINGS_KEY).then((saved) => {
-      if (saved === "metric" || saved === "imperial") setMeasurementSystemState(saved);
+      if (saved === "metric" || saved === "imperial") {
+        setDefaultMeasurementSystem(saved);
+        setMeasurementSystemState(saved);
+      }
     });
   }, []);
 
   const setMeasurementSystem = useCallback(async (value: MeasurementSystem) => {
+    setDefaultMeasurementSystem(value);
     setMeasurementSystemState(value);
     await AsyncStorage.setItem(SETTINGS_KEY, value);
   }, []);
