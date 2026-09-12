@@ -10,6 +10,7 @@ import express from "express";
 import { migrateAndSeed, pool } from "./db";
 import { estimateRouter } from "./routes/estimate";
 import { factorsRouter } from "./routes/factors";
+import { geocodeRouter } from "./routes/geocode";
 import { statsRouter } from "./routes/stats";
 import { tripsRouter } from "./routes/trips";
 
@@ -27,6 +28,7 @@ app.get("/api/health", async (_req, res) => {
 });
 
 app.use("/api/factors", factorsRouter);
+app.use("/api/geocode", geocodeRouter);
 app.use("/api/routes/estimate", estimateRouter);
 app.use("/api/trips", tripsRouter);
 app.use("/api/stats", statsRouter);
