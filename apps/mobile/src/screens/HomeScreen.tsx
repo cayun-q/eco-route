@@ -1,5 +1,5 @@
-import { useCallback } from "react";
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useCallback, useState } from "react";
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -21,8 +21,10 @@ function formatRefreshTime(value: number | null): string | null {
 }
 
 export function HomeScreen({ navigation }: Props) {
-  const { trips, stats, loading, error, online, lastRefreshedAt, refresh } = useStore();
+  const { trips, stats, loading, error, online, lastRefreshedAt, refresh, deleteTrip, clearTrips } = useStore();
   const insets = useSafeAreaInsets();
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -31,6 +33,16 @@ export function HomeScreen({ navigation }: Props) {
   );
 
   const refreshedLabel = formatRefreshTime(lastRefreshedAt);
+
+  async function clearAll() {
+    setClearing(true);
+    try {
+      await clearTrips();
+      setConfirmClear(false);
+    } finally {
+      setClearing(false);
+    }
+  }
 
   return (
     <Screen>
@@ -74,7 +86,31 @@ export function HomeScreen({ navigation }: Props) {
         ) : null}
         {error && online ? <Text style={styles.banner}>{error}</Text> : null}
 
-        <Text style={styles.section}>Recent</Text>
+        <View style={styles.sectionRow}>
+          <Text style={styles.section}>Recent</Text>
+          {trips.length > 0 && !confirmClear ? (
+            <Pressable onPress={() => setConfirmClear(true)} style={styles.clearLink}>
+              <Text style={styles.clearLinkText}>Clear logs</Text>
+            </Pressable>
+          ) : null}
+        </View>
+
+        {confirmClear ? (
+          <View style={styles.clearConfirm}>
+            <View style={styles.clearCopy}>
+              <Text style={styles.clearTitle}>Clear every logged trip?</Text>
+              <Text style={styles.clearBody}>This removes all saved trip logs and queued offline logs. This cannot be undone.</Text>
+            </View>
+            <View style={styles.clearActions}>
+              <Pressable disabled={clearing} onPress={() => void clearAll()} style={styles.clearDanger}>
+                <Text style={styles.clearDangerText}>{clearing ? "Clearing…" : "Yes, clear all"}</Text>
+              </Pressable>
+              <Pressable disabled={clearing} onPress={() => setConfirmClear(false)} style={styles.clearCancel}>
+                <Text style={styles.clearCancelText}>Cancel</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
 
         {loading && trips.length === 0 ? (
           <View style={styles.loading}>
@@ -96,6 +132,7 @@ export function HomeScreen({ navigation }: Props) {
               key={trip.id}
               trip={trip}
               onPress={() => navigation.navigate("TripDetail", { trip })}
+              onDelete={() => deleteTrip(trip)}
             />
           ))}
         </View>
@@ -163,6 +200,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderRadius: radius.card,
+    overflow: "hidden",
     paddingVertical: space.lg,
   },
   stat: {
@@ -186,13 +225,67 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: colors.line,
   },
+  sectionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: space.sm,
+  },
   section: {
     fontFamily: font.bodyMed,
     fontSize: 13,
     color: colors.muted,
     textTransform: "uppercase",
     letterSpacing: 0.7,
-    marginTop: space.sm,
+  },
+  clearLink: { paddingVertical: 5, paddingHorizontal: 2 },
+  clearLinkText: {
+    fontFamily: font.bodyMed,
+    fontSize: 13,
+    color: colors.danger,
+  },
+  clearConfirm: {
+    padding: space.md,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: radius.card,
+    backgroundColor: colors.surface,
+    gap: space.md,
+  },
+  clearCopy: { gap: 4 },
+  clearTitle: {
+    fontFamily: font.bodyBold,
+    fontSize: 14,
+    color: colors.danger,
+  },
+  clearBody: {
+    fontFamily: font.body,
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.muted,
+  },
+  clearActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: space.sm,
+  },
+  clearDanger: {
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: radius.button,
+    backgroundColor: colors.danger,
+  },
+  clearDangerText: {
+    fontFamily: font.bodyMed,
+    fontSize: 13,
+    color: colors.white,
+  },
+  clearCancel: { paddingHorizontal: 10, paddingVertical: 9 },
+  clearCancelText: {
+    fontFamily: font.bodyMed,
+    fontSize: 13,
+    color: colors.muted,
   },
   list: {
     gap: space.md,
@@ -209,6 +302,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accentSoft,
     borderWidth: 1,
     borderColor: colors.line,
+    borderRadius: radius.card,
     padding: space.md,
   },
   refreshed: {
