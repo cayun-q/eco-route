@@ -1,4 +1,4 @@
-export const MODES = ["car", "plane"] as const;
+export const MODES = ["car", "ev", "plane"] as const;
 export type TransportMode = (typeof MODES)[number];
 export type LogMethod = "automatic" | "manual";
 
