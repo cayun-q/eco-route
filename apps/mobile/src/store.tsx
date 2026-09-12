@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useColorScheme } from "react-native";
 import {
   createContext,
   useCallback,
@@ -8,8 +9,14 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { EmissionFactor, Trip, TripInput, TripStats } from "@carbonroute/shared";
-import { setDefaultMeasurementSystem, type MeasurementSystem } from "./format";
+import type { EmissionFactor, LogMethod, Trip, TripInput, TripStats } from "@carbonroute/shared";
+import {
+  setDefaultDisplayPrecision,
+  setDefaultMeasurementSystem,
+  type DisplayPrecision,
+  type MeasurementSystem,
+} from "./format";
+import type { ResolvedTheme, ThemePreference } from "./theme";
 import { api } from "./api";
 import {
   cacheFactors,
@@ -20,7 +27,27 @@ import {
   removeQueued,
 } from "./offline";
 
-const SETTINGS_KEY = "luma.measurement.v1";
+const SETTINGS_KEY = "luma.preferences.v2";
+const LEGACY_MEASUREMENT_KEY = "luma.measurement.v1";
+export type RecentTripsPreference = 5 | 10 | 25 | "all";
+
+type Preferences = {
+  measurementSystem: MeasurementSystem;
+  defaultLoggingMethod: LogMethod;
+  themePreference: ThemePreference;
+  displayPrecision: DisplayPrecision;
+  showDrivingComparison: boolean;
+  recentTrips: RecentTripsPreference;
+};
+
+const DEFAULT_PREFERENCES: Preferences = {
+  measurementSystem: "metric",
+  defaultLoggingMethod: "automatic",
+  themePreference: "system",
+  displayPrecision: "simple",
+  showDrivingComparison: true,
+  recentTrips: 10,
+};
 
 const emptyStats = (): TripStats => ({
   tripCount: 0,
@@ -39,8 +66,20 @@ type Store = {
   loading: boolean;
   error: string | null;
   lastRefreshedAt: number | null;
+  preferencesLoaded: boolean;
   measurementSystem: MeasurementSystem;
+  defaultLoggingMethod: LogMethod;
+  themePreference: ThemePreference;
+  resolvedTheme: ResolvedTheme;
+  displayPrecision: DisplayPrecision;
+  showDrivingComparison: boolean;
+  recentTrips: RecentTripsPreference;
   setMeasurementSystem: (value: MeasurementSystem) => Promise<void>;
+  setDefaultLoggingMethod: (value: LogMethod) => Promise<void>;
+  setThemePreference: (value: ThemePreference) => Promise<void>;
+  setDisplayPrecision: (value: DisplayPrecision) => Promise<void>;
+  setShowDrivingComparison: (value: boolean) => Promise<void>;
+  setRecentTrips: (value: RecentTripsPreference) => Promise<void>;
   refresh: () => Promise<void>;
   saveTrip: (input: TripInput) => Promise<Trip>;
   deleteTrip: (trip: Trip) => Promise<void>;
@@ -50,6 +89,7 @@ type Store = {
 const StoreContext = createContext<Store | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
+  const systemScheme = useColorScheme();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [stats, setStats] = useState<TripStats>(emptyStats);
   const [factors, setFactors] = useState<EmissionFactor[]>([]);
@@ -57,22 +97,71 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
-  const [measurementSystem, setMeasurementSystemState] = useState<MeasurementSystem>("metric");
+  const [preferences, setPreferences] = useState<Preferences>(DEFAULT_PREFERENCES);
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
 
   useEffect(() => {
-    void AsyncStorage.getItem(SETTINGS_KEY).then((saved) => {
-      if (saved === "metric" || saved === "imperial") {
-        setDefaultMeasurementSystem(saved);
-        setMeasurementSystemState(saved);
+    void (async () => {
+      let next = DEFAULT_PREFERENCES;
+      try {
+        const raw = await AsyncStorage.getItem(SETTINGS_KEY);
+        if (raw) {
+          const saved = JSON.parse(raw) as Partial<Preferences>;
+          next = { ...DEFAULT_PREFERENCES, ...saved };
+        } else {
+          const legacy = await AsyncStorage.getItem(LEGACY_MEASUREMENT_KEY);
+          if (legacy === "metric" || legacy === "imperial") {
+            next = { ...DEFAULT_PREFERENCES, measurementSystem: legacy };
+          }
+        }
+      } catch {
+        next = DEFAULT_PREFERENCES;
       }
+      setDefaultMeasurementSystem(next.measurementSystem);
+      setDefaultDisplayPrecision(next.displayPrecision);
+      setPreferences(next);
+      setPreferencesLoaded(true);
+    })();
+  }, []);
+
+  const updatePreference = useCallback(async <K extends keyof Preferences>(key: K, value: Preferences[K]) => {
+    setPreferences((current) => {
+      const next = { ...current, [key]: value };
+      void AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+      return next;
     });
   }, []);
 
   const setMeasurementSystem = useCallback(async (value: MeasurementSystem) => {
     setDefaultMeasurementSystem(value);
-    setMeasurementSystemState(value);
-    await AsyncStorage.setItem(SETTINGS_KEY, value);
-  }, []);
+    await updatePreference("measurementSystem", value);
+  }, [updatePreference]);
+
+  const setDefaultLoggingMethod = useCallback(async (value: LogMethod) => {
+    await updatePreference("defaultLoggingMethod", value);
+  }, [updatePreference]);
+
+  const setThemePreference = useCallback(async (value: ThemePreference) => {
+    await updatePreference("themePreference", value);
+  }, [updatePreference]);
+
+  const setDisplayPrecision = useCallback(async (value: DisplayPrecision) => {
+    setDefaultDisplayPrecision(value);
+    await updatePreference("displayPrecision", value);
+  }, [updatePreference]);
+
+  const setShowDrivingComparison = useCallback(async (value: boolean) => {
+    await updatePreference("showDrivingComparison", value);
+  }, [updatePreference]);
+
+  const setRecentTrips = useCallback(async (value: RecentTripsPreference) => {
+    await updatePreference("recentTrips", value);
+  }, [updatePreference]);
+
+  const resolvedTheme: ResolvedTheme =
+    preferences.themePreference === "system"
+      ? systemScheme === "dark" ? "dark" : "light"
+      : preferences.themePreference;
 
   const flushQueue = useCallback(async () => {
     const queued = await readQueue();
@@ -179,27 +268,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       loading,
       error,
       lastRefreshedAt,
-      measurementSystem,
+      preferencesLoaded,
+      measurementSystem: preferences.measurementSystem,
+      defaultLoggingMethod: preferences.defaultLoggingMethod,
+      themePreference: preferences.themePreference,
+      resolvedTheme,
+      displayPrecision: preferences.displayPrecision,
+      showDrivingComparison: preferences.showDrivingComparison,
+      recentTrips: preferences.recentTrips,
       setMeasurementSystem,
+      setDefaultLoggingMethod,
+      setThemePreference,
+      setDisplayPrecision,
+      setShowDrivingComparison,
+      setRecentTrips,
       refresh,
       saveTrip,
       deleteTrip,
       clearTrips,
     }),
     [
-      trips,
-      stats,
-      factors,
-      online,
-      loading,
-      error,
-      lastRefreshedAt,
-      measurementSystem,
-      setMeasurementSystem,
-      refresh,
-      saveTrip,
-      deleteTrip,
-      clearTrips,
+      trips, stats, factors, online, loading, error, lastRefreshedAt, preferencesLoaded,
+      preferences, resolvedTheme, setMeasurementSystem, setDefaultLoggingMethod,
+      setThemePreference, setDisplayPrecision, setShowDrivingComparison, setRecentTrips,
+      refresh, saveTrip, deleteTrip, clearTrips,
     ],
   );
 
