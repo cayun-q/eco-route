@@ -10,6 +10,7 @@ const GRAMS_PER_POUND = 453.59237;
 const KM_PER_MILE = 1.609344;
 let defaultMeasurementSystem: MeasurementSystem = "metric";
 let defaultDisplayPrecision: DisplayPrecision = "simple";
+let defaultShowDrivingComparison = true;
 
 export function setDefaultMeasurementSystem(system: MeasurementSystem): void {
   defaultMeasurementSystem = system;
@@ -17,6 +18,10 @@ export function setDefaultMeasurementSystem(system: MeasurementSystem): void {
 
 export function setDefaultDisplayPrecision(precision: DisplayPrecision): void {
   defaultDisplayPrecision = precision;
+}
+
+export function setDefaultShowDrivingComparison(show: boolean): void {
+  defaultShowDrivingComparison = show;
 }
 
 export function placeDisplayLabel(label: string): string {
@@ -110,7 +115,7 @@ export function vsDrivingCopy(
   system: MeasurementSystem = defaultMeasurementSystem,
   precision: DisplayPrecision = defaultDisplayPrecision,
 ): string | null {
-  if (vsDrivingKg == null) return null;
+  if (!defaultShowDrivingComparison || vsDrivingKg == null) return null;
   const abs = Math.abs(vsDrivingKg);
   const amount = formatKg(abs, system, precision);
   if (vsDrivingKg < 0) return `${amount} less than the same trip by car`;
