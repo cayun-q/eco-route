@@ -40,6 +40,9 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  deleteTrip: (id: string) =>
+    request<{ deleted: boolean }>(`/api/trips/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  clearTrips: () => request<{ deleted: number }>("/api/trips", { method: "DELETE" }),
   stats: () => request<TripStats>("/api/stats"),
 };
 
