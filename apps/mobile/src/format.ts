@@ -110,15 +110,30 @@ export function modeLabel(mode: TransportMode): string {
   return "Train";
 }
 
+export function comparisonCopy(
+  currentMode: TransportMode,
+  comparisonMode: TransportMode | null | undefined,
+  vsComparisonKg: number | null | undefined,
+  system: MeasurementSystem = defaultMeasurementSystem,
+  precision: DisplayPrecision = defaultDisplayPrecision,
+): string | null {
+  if (!defaultShowDrivingComparison || comparisonMode == null || vsComparisonKg == null) return null;
+  const amount = formatKg(Math.abs(vsComparisonKg), system, precision);
+  const comparisonLabel = comparisonMode === "plane" ? "flying" : "driving";
+
+  if (vsComparisonKg < 0) {
+    return `${amount} CO₂e saved vs ${comparisonLabel}`;
+  }
+  if (vsComparisonKg > 0) {
+    return `${amount} more CO₂e than ${comparisonLabel}`;
+  }
+  return `Same CO₂e as ${comparisonLabel}`;
+}
+
 export function vsDrivingCopy(
   vsDrivingKg: number | null | undefined,
   system: MeasurementSystem = defaultMeasurementSystem,
   precision: DisplayPrecision = defaultDisplayPrecision,
 ): string | null {
-  if (!defaultShowDrivingComparison || vsDrivingKg == null) return null;
-  const abs = Math.abs(vsDrivingKg);
-  const amount = formatKg(abs, system, precision);
-  if (vsDrivingKg < 0) return `${amount} less than the same trip by car`;
-  if (vsDrivingKg > 0) return `${amount} more than driving`;
-  return "Same CO₂e as driving this distance";
+  return comparisonCopy("plane", "car", vsDrivingKg, system, precision);
 }
