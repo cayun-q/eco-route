@@ -4,10 +4,17 @@ import { pool } from "../db";
 
 export const statsRouter = Router();
 
-statsRouter.get("/", async (_req, res, next) => {
+statsRouter.get("/", async (req, res, next) => {
   try {
+    const clientId = req.get("x-luma-client-id")?.trim();
+    if (!clientId || clientId.length < 8 || clientId.length > 128) {
+      res.status(400).json({ error: "Missing or invalid Luma client identifier." });
+      return;
+    }
+
     const { rows } = await pool.query<{ mode: TransportMode; count: string; co2e: string }>(
-      "SELECT mode, COUNT(*)::text AS count, COALESCE(SUM(co2e_kg), 0)::text AS co2e FROM trips WHERE mode IN ('car', 'ev', 'bus', 'bike', 'walk', 'plane') GROUP BY mode",
+      "SELECT mode, COUNT(*)::text AS count, COALESCE(SUM(co2e_kg), 0)::text AS co2e FROM trips WHERE client_id = $1 AND mode IN ('car', 'ev', 'bus', 'bike', 'walk', 'plane') GROUP BY mode",
+      [clientId],
     );
     const byMode = Object.fromEntries(MODES.map((mode) => [mode, { count: 0, co2eKg: 0 }])) as Record<TransportMode, { count: number; co2eKg: number }>;
     let tripCount = 0;
