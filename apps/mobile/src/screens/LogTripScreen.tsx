@@ -23,7 +23,7 @@ import { useStore } from "../store";
 import { colorsForTheme, space, type as font, type ThemeColors } from "../theme";
 import { Button, Chip, Field, Heading, Muted, Screen } from "../ui";
 import { MapPreview } from "../components/MapPreview";
-import { formatFactor, vsDrivingCopy } from "../format";
+import { comparisonCopy, formatFactor } from "../format";
 
 type Props = NativeStackScreenProps<RootStackParamList, "LogTrip">;
 
@@ -224,8 +224,14 @@ export function LogTripScreen({ navigation }: Props) {
   }, [origin, destination, mode, bothEnds, carStatus, logMethod]);
 
   const compare = useMemo(
-    () => vsDrivingCopy(estimate?.vsDrivingKg, measurementSystem, displayPrecision),
-    [estimate, measurementSystem, displayPrecision],
+    () => comparisonCopy(
+      estimate?.mode ?? mode,
+      estimate?.comparisonMode,
+      estimate?.vsComparisonKg,
+      measurementSystem,
+      displayPrecision,
+    ),
+    [estimate, mode, measurementSystem, displayPrecision],
   );
 
   function updateManualLeg(index: number, patch: Partial<ManualLegDraft>) {
