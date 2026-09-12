@@ -68,11 +68,13 @@ export function Chip({
   selected,
   onPress,
   tone = "accent",
+  disabled = false,
 }: {
   label: string;
   selected?: boolean;
   onPress?: () => void;
   tone?: "accent" | "clay" | "warn" | "muted" | "car" | "plane" | "train";
+  disabled?: boolean;
 }) {
   const toneBg = {
     accent: colors.accent,
@@ -83,11 +85,23 @@ export function Chip({
     plane: colors.mode.plane,
     train: colors.mode.train,
   }[tone];
-  const look = [styles.chip, selected ? { backgroundColor: toneBg, borderColor: toneBg } : styles.chipIdle];
+  const look = [
+    styles.chip,
+    selected ? { backgroundColor: toneBg, borderColor: toneBg } : styles.chipIdle,
+    disabled ? styles.chipDisabled : null,
+  ];
   const labelEl = (
-    <Text style={[styles.chipLabel, selected ? styles.chipLabelOn : styles.chipLabelOff]}>{label}</Text>
+    <Text
+      style={[
+        styles.chipLabel,
+        selected ? styles.chipLabelOn : styles.chipLabelOff,
+        disabled ? styles.chipLabelDisabled : null,
+      ]}
+    >
+      {label}
+    </Text>
   );
-  if (!onPress) {
+  if (!onPress || disabled) {
     return <View style={look}>{labelEl}</View>;
   }
   return (
@@ -214,6 +228,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
     borderColor: colors.line,
   },
+  chipDisabled: {
+    opacity: 0.38,
+  },
   chipLabel: {
     fontFamily: font.bodyMed,
     fontSize: 14,
@@ -223,6 +240,9 @@ const styles = StyleSheet.create({
   },
   chipLabelOff: {
     color: colors.ink,
+  },
+  chipLabelDisabled: {
+    color: colors.muted,
   },
   empty: {
     paddingVertical: space.xl,
