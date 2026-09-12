@@ -11,6 +11,7 @@ import type { EmissionFactor, Trip, TripInput, TripStats } from "@carbonroute/sh
 import { api } from "./api";
 import {
   cacheFactors,
+  clearQueue,
   enqueueTrip,
   readCachedFactors,
   readQueue,
@@ -36,6 +37,8 @@ type Store = {
   lastRefreshedAt: number | null;
   refresh: () => Promise<void>;
   saveTrip: (input: TripInput) => Promise<Trip>;
+  deleteTrip: (trip: Trip) => Promise<void>;
+  clearTrips: () => Promise<void>;
 };
 
 const StoreContext = createContext<Store | null>(null);
@@ -127,9 +130,51 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [refresh],
   );
 
+  const deleteTrip = useCallback(
+    async (trip: Trip) => {
+      if (trip.pending || trip.id.startsWith("local-")) {
+        await removeQueued(trip.id);
+      } else {
+        await api.deleteTrip(trip.id);
+      }
+      await refresh();
+    },
+    [refresh],
+  );
+
+  const clearTrips = useCallback(async () => {
+    await clearQueue();
+    await api.clearTrips();
+    await refresh();
+  }, [refresh]);
+
   const value = useMemo(
-    () => ({ trips, stats, factors, online, loading, error, lastRefreshedAt, refresh, saveTrip }),
-    [trips, stats, factors, online, loading, error, lastRefreshedAt, refresh, saveTrip],
+    () => ({
+      trips,
+      stats,
+      factors,
+      online,
+      loading,
+      error,
+      lastRefreshedAt,
+      refresh,
+      saveTrip,
+      deleteTrip,
+      clearTrips,
+    }),
+    [
+      trips,
+      stats,
+      factors,
+      online,
+      loading,
+      error,
+      lastRefreshedAt,
+      refresh,
+      saveTrip,
+      deleteTrip,
+      clearTrips,
+    ],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
