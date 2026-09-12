@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -69,7 +69,7 @@ export function HomeScreen({ navigation }: Props) {
         {!loading && trips.length === 0 ? (
           <EmptyState
             title="No trips on the ledger"
-            body="Log a drive, flight, or train ride. CarbonRoute estimates CO₂e from the Postgres factor table — not a hardcoded g/km."
+            body="Log a drive or flight. CarbonRoute estimates CO₂e from the Postgres factor table — not a hardcoded g/km."
           />
         ) : null}
 
@@ -83,9 +83,12 @@ export function HomeScreen({ navigation }: Props) {
           ))}
         </View>
 
-        <Pressable onPress={() => void refresh()} accessibilityRole="button">
-          <Text style={styles.refresh}>Refresh ledger</Text>
-        </Pressable>
+        <Button
+          label={loading ? "Refreshing…" : "Refresh ledger"}
+          onPress={() => void refresh()}
+          disabled={loading}
+          variant="ghost"
+        />
       </ScrollView>
     </Screen>
   );
@@ -176,12 +179,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
     padding: space.md,
-  },
-  refresh: {
-    fontFamily: font.bodyMed,
-    fontSize: 14,
-    color: colors.accent,
-    textAlign: "center",
-    paddingVertical: space.sm,
   },
 });
