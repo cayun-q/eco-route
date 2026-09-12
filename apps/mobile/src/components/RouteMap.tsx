@@ -1,15 +1,22 @@
 import { StyleSheet } from "react-native";
 import { WebView } from "react-native-webview";
-import type { Place } from "@carbonroute/shared";
+import type { Place, TransportMode } from "@carbonroute/shared";
 import { colors } from "../theme";
 
 type Props = {
   origin: Place;
   destination: Place;
   polyline: [number, number][];
+  mode: TransportMode;
 };
 
-function leafletHtml(origin: Place, destination: Place, polyline: [number, number][]): string {
+const CAR_ROUTE = "#2563EB";
+const PLANE_ROUTE = "#D97706";
+
+function leafletHtml(origin: Place, destination: Place, polyline: [number, number][], mode: TransportMode): string {
+  const routeColor = mode === "car" ? CAR_ROUTE : PLANE_ROUTE;
+  const routeWeight = mode === "car" ? 5 : 4;
+  const smoothFactor = mode === "plane" ? 0.35 : 1;
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -19,7 +26,7 @@ function leafletHtml(origin: Place, destination: Place, polyline: [number, numbe
   <style>
     html, body, #map { height: 100%; margin: 0; background: ${colors.surface}; }
     .leaflet-container { background: ${colors.white}; }
-    .pin { width: 14px; height: 14px; border: 2px solid ${colors.white}; box-shadow: 2px 2px 0 ${colors.ink}29; }
+    .pin { width: 14px; height: 14px; border: 2px solid ${colors.white}; box-shadow: 2px 2px 0 ${colors.ink}29; border-radius: 50%; }
     .pin-a { background: ${colors.accent}; }
     .pin-b { background: ${colors.clay}; }
   </style>
@@ -36,7 +43,14 @@ function leafletHtml(origin: Place, destination: Place, polyline: [number, numbe
       attribution: '&copy; OpenStreetMap',
       maxZoom: 18
     }).addTo(map);
-    const line = L.polyline(polyline, { color: '${colors.ink}', weight: 4, opacity: 0.92 }).addTo(map);
+    const line = L.polyline(polyline, {
+      color: '${routeColor}',
+      weight: ${routeWeight},
+      opacity: 0.94,
+      smoothFactor: ${smoothFactor},
+      lineCap: 'round',
+      lineJoin: 'round'
+    }).addTo(map);
     const iconA = L.divIcon({ className: '', html: '<div class="pin pin-a"></div>', iconSize: [14, 14], iconAnchor: [7, 7] });
     const iconB = L.divIcon({ className: '', html: '<div class="pin pin-b"></div>', iconSize: [14, 14], iconAnchor: [7, 7] });
     L.marker([origin.lat, origin.lng], { icon: iconA, title: origin.label }).addTo(map);
@@ -47,12 +61,12 @@ function leafletHtml(origin: Place, destination: Place, polyline: [number, numbe
 </html>`;
 }
 
-export function RouteMap({ origin, destination, polyline }: Props) {
+export function RouteMap({ origin, destination, polyline, mode }: Props) {
   if (!polyline.length) return null;
   return (
     <WebView
       originWhitelist={["*"]}
-      source={{ html: leafletHtml(origin, destination, polyline) }}
+      source={{ html: leafletHtml(origin, destination, polyline, mode) }}
       style={styles.fill}
     />
   );
