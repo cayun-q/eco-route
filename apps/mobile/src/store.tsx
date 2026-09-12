@@ -33,6 +33,7 @@ type Store = {
   online: boolean;
   loading: boolean;
   error: string | null;
+  lastRefreshedAt: number | null;
   refresh: () => Promise<void>;
   saveTrip: (input: TripInput) => Promise<Trip>;
 };
@@ -46,6 +47,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [online, setOnline] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
 
   const flushQueue = useCallback(async () => {
     const queued = await readQueue();
@@ -89,6 +91,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setStats(statsRes);
       setOnline(true);
       setError(null);
+      setLastRefreshedAt(Date.now());
     } catch (err) {
       setOnline(false);
       setTrips(queued);
@@ -123,8 +126,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ trips, stats, factors, online, loading, error, refresh, saveTrip }),
-    [trips, stats, factors, online, loading, error, refresh, saveTrip],
+    () => ({ trips, stats, factors, online, loading, error, lastRefreshedAt, refresh, saveTrip }),
+    [trips, stats, factors, online, loading, error, lastRefreshedAt, refresh, saveTrip],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
