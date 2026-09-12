@@ -5,7 +5,7 @@ import type { RouteEstimate } from "@carbonroute/shared";
 import { colors, space, type as font } from "../theme";
 import { Button, Heading, Muted, Screen } from "../ui";
 import { MapPreview } from "../components/MapPreview";
-import { formatDate, formatDuration, formatKg, formatKm, modeLabel } from "../format";
+import { formatDate, formatDuration, formatKg, formatKm, modeLabel, placeDisplayLabel } from "../format";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TripDetail">;
 
@@ -30,7 +30,7 @@ export function TripDetailScreen({ navigation, route }: Props) {
     <Screen>
       <ScrollView contentContainerStyle={styles.wrap}>
         <Heading>
-          {trip.originLabel.split(",")[0]} → {trip.destinationLabel.split(",")[0]}
+          {placeDisplayLabel(trip.originLabel)} → {placeDisplayLabel(trip.destinationLabel)}
         </Heading>
         <Muted>
           {trip.logMethod === "manual" ? "Manual itinerary" : modeLabel(trip.mode)} · {formatDate(trip.createdAt)}
