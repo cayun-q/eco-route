@@ -17,6 +17,8 @@ export function SettingsScreen() {
     setDisplayPrecision,
     showDrivingComparison,
     setShowDrivingComparison,
+    showHiddenOptions,
+    setShowHiddenOptions,
     recentTrips,
     setRecentTrips,
   } = useStore();
@@ -59,6 +61,11 @@ export function SettingsScreen() {
         <PreferenceSection label="Trip information">
           <Option title="Show driving comparison" detail="Show more/less CO₂e than driving" selected={showDrivingComparison} onPress={() => void setShowDrivingComparison(true)} styles={styles} />
           <Option title="Hide driving comparison" detail="Only show the trip estimate" selected={!showDrivingComparison} onPress={() => void setShowDrivingComparison(false)} styles={styles} />
+        </PreferenceSection>
+
+        <PreferenceSection label="Recommendations">
+          <Option title="Hide hidden options" detail="Only show practical recommended alternatives" selected={!showHiddenOptions} onPress={() => void setShowHiddenOptions(false)} styles={styles} />
+          <Option title="Show hidden options" detail="Also show filtered or higher-impact alternatives" selected={showHiddenOptions} onPress={() => void setShowHiddenOptions(true)} styles={styles} />
         </PreferenceSection>
 
         <PreferenceSection label="Recent trips">
