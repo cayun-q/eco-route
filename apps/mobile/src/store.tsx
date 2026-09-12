@@ -55,6 +55,7 @@ const emptyStats = (): TripStats => ({
   totalCo2eKg: 0,
   byMode: {
     car: { count: 0, co2eKg: 0 },
+    ev: { count: 0, co2eKg: 0 },
     plane: { count: 0, co2eKg: 0 },
   },
 });
