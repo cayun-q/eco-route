@@ -30,6 +30,15 @@ function phraseMatches(query: string, candidate: string): boolean {
   return c === q || c.startsWith(`${q} `) || c.includes(` ${q} `) || c.endsWith(` ${q}`);
 }
 
+function shouldSearchAddress(query: string): boolean {
+  const trimmed = query.trim();
+  if (trimmed.length < 3) return false;
+  // A bare house number such as "5000" is too broad to be useful. Wait for
+  // street/locality text ("5000 Forbes") or an explicit comma before searching.
+  if (/^\d[\d\s-]*$/.test(trimmed) && !trimmed.includes(",")) return false;
+  return true;
+}
+
 async function nominatim(query: string): Promise<Place | null> {
   const url = new URL("https://nominatim.openstreetmap.org/search");
   url.searchParams.set("q", query);
@@ -59,7 +68,7 @@ async function nominatim(query: string): Promise<Place | null> {
 
 export async function searchPlaces(query: string, limit = 6): Promise<Place[]> {
   const trimmed = query.trim();
-  if (trimmed.length < 3) return [];
+  if (!shouldSearchAddress(trimmed)) return [];
 
   const key = normalizeWords(trimmed);
   const cachedSearch = searchCache.get(key);
