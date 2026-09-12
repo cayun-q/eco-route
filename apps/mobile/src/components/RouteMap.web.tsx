@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import type { Place, TransportMode } from "@carbonroute/shared";
+import type { Place, RouteLeg, TransportMode } from "@carbonroute/shared";
 import { colors } from "../theme";
 
 type Props = {
@@ -7,6 +7,7 @@ type Props = {
   destination: Place;
   polyline: [number, number][];
   mode: TransportMode;
+  legs?: RouteLeg[];
 };
 
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
@@ -32,8 +33,6 @@ type MapLike = {
 type PolylineLike = {
   addTo: (m: unknown) => PolylineLike;
   getBounds: () => unknown;
-  setLatLngs: (pts: [number, number][]) => PolylineLike;
-  setStyle: (o: object) => PolylineLike;
 };
 
 type MarkerLike = {
@@ -63,14 +62,12 @@ function loadLeaflet(): Promise<LeafletLike> {
       if (L) resolve(L);
       else reject(new Error("Leaflet loaded without global L"));
     };
-
     const existingScript = document.querySelector(`script[src="${LEAFLET_JS}"]`) as HTMLScriptElement | null;
     if (existingScript) {
       existingScript.addEventListener("load", finish, { once: true });
       existingScript.addEventListener("error", () => reject(new Error("Leaflet failed")), { once: true });
       return;
     }
-
     const script = document.createElement("script");
     script.src = LEAFLET_JS;
     script.async = true;
@@ -78,29 +75,26 @@ function loadLeaflet(): Promise<LeafletLike> {
     script.onerror = () => reject(new Error("Leaflet failed"));
     document.head.appendChild(script);
   });
-
   return leafletPromise;
 }
 
-export function RouteMap({ origin, destination, polyline, mode }: Props) {
+export function RouteMap({ origin, destination, polyline, mode, legs }: Props) {
   const rawId = useId().replace(/[^a-zA-Z0-9]/g, "");
   const id = `cr-map-${rawId}`;
   const mapRef = useRef<MapLike | null>(null);
   const leafletRef = useRef<LeafletLike | null>(null);
-  const lineRef = useRef<PolylineLike | null>(null);
+  const lineRefs = useRef<PolylineLike[]>([]);
   const originMarkerRef = useRef<MarkerLike | null>(null);
   const destinationMarkerRef = useRef<MarkerLike | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-
     (async () => {
       const L = await loadLeaflet();
       if (cancelled) return;
       const el = document.getElementById(id);
       if (!el) return;
-
       const map = L.map(el, {
         zoomControl: true,
         attributionControl: true,
@@ -114,7 +108,6 @@ export function RouteMap({ origin, destination, polyline, mode }: Props) {
         updateWhenZooming: false,
         keepBuffer: 3,
       }).addTo(map);
-
       leafletRef.current = L;
       mapRef.current = map;
       setReady(true);
@@ -124,7 +117,7 @@ export function RouteMap({ origin, destination, polyline, mode }: Props) {
     return () => {
       cancelled = true;
       setReady(false);
-      lineRef.current = null;
+      lineRefs.current = [];
       originMarkerRef.current = null;
       destinationMarkerRef.current = null;
       mapRef.current?.remove();
@@ -139,21 +132,24 @@ export function RouteMap({ origin, destination, polyline, mode }: Props) {
     const map = mapRef.current;
     if (!L || !map) return;
 
-    const lineStyle = {
-      color: mode === "car" ? CAR_ROUTE : PLANE_ROUTE,
-      weight: mode === "car" ? 5 : 4,
-      opacity: 0.94,
-      smoothFactor: mode === "plane" ? 0.3 : 1,
-      lineCap: "round",
-      lineJoin: "round",
-    };
+    for (const line of lineRefs.current) map.removeLayer(line);
+    lineRefs.current = [];
 
-    let line = lineRef.current;
-    if (!line) {
-      line = L.polyline(polyline, lineStyle).addTo(map);
-      lineRef.current = line;
-    } else {
-      line.setLatLngs(polyline).setStyle(lineStyle);
+    const drawLegs = legs?.length
+      ? legs
+      : [{ mode, polyline, origin, destination, distanceKm: 0, durationMin: 0, provider: "haversine" as const }];
+
+    for (const leg of drawLegs) {
+      if (!leg.polyline.length) continue;
+      const line = L.polyline(leg.polyline, {
+        color: leg.mode === "car" ? CAR_ROUTE : PLANE_ROUTE,
+        weight: leg.mode === "car" ? 5 : 4,
+        opacity: 0.94,
+        smoothFactor: leg.mode === "plane" ? 0.3 : 1,
+        lineCap: "round",
+        lineJoin: "round",
+      }).addTo(map);
+      lineRefs.current.push(line);
     }
 
     const iconA = L.divIcon({
@@ -174,19 +170,17 @@ export function RouteMap({ origin, destination, polyline, mode }: Props) {
     } else {
       originMarkerRef.current.setLatLng([origin.lat, origin.lng]);
     }
-
     if (!destinationMarkerRef.current) {
-      destinationMarkerRef.current = L.marker([destination.lat, destination.lng], {
-        icon: iconB,
-        title: destination.label,
-      }).addTo(map);
+      destinationMarkerRef.current = L.marker([destination.lat, destination.lng], { icon: iconB, title: destination.label }).addTo(map);
     } else {
       destinationMarkerRef.current.setLatLng([destination.lat, destination.lng]);
     }
 
-    map.fitBounds(line.getBounds(), { padding: [28, 28] });
+    const boundsLine = L.polyline(polyline, { opacity: 0, weight: 0 }).addTo(map);
+    map.fitBounds(boundsLine.getBounds(), { padding: [28, 28] });
+    map.removeLayer(boundsLine);
     requestAnimationFrame(() => map.invalidateSize());
-  }, [ready, origin.lat, origin.lng, origin.label, destination.lat, destination.lng, destination.label, polyline, mode]);
+  }, [ready, origin.lat, origin.lng, origin.label, destination.lat, destination.lng, destination.label, polyline, mode, legs]);
 
   return <div id={id} style={{ width: "100%", height: "100%", background: colors.white }} />;
 }
