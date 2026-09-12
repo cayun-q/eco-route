@@ -47,11 +47,11 @@ export function Chip({ label, selected, onPress, tone = "accent", disabled = fal
   label: string;
   selected?: boolean;
   onPress?: () => void;
-  tone?: "accent" | "clay" | "warn" | "muted" | "car" | "plane" | "train";
+  tone?: "accent" | "clay" | "warn" | "muted" | "car" | "ev" | "plane" | "train";
   disabled?: boolean;
 }) {
   const { colors, styles } = useUiStyles();
-  const toneBg = { accent: colors.accent, clay: colors.clay, warn: colors.warn, muted: colors.ink, car: colors.mode.car, plane: colors.mode.plane, train: colors.mode.train }[tone];
+  const toneBg = { accent: colors.accent, clay: colors.clay, warn: colors.warn, muted: colors.ink, car: colors.mode.car, ev: colors.mode.ev, plane: colors.mode.plane, train: colors.mode.train }[tone];
   const look = [styles.chip, selected ? { backgroundColor: toneBg, borderColor: toneBg } : styles.chipIdle, disabled ? styles.chipDisabled : null];
   const labelEl = <Text style={[styles.chipLabel, selected ? styles.chipLabelOn : styles.chipLabelOff, disabled ? styles.chipLabelDisabled : null]}>{label}</Text>;
   if (!onPress || disabled) return <View style={look}>{labelEl}</View>;
