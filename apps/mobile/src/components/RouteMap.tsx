@@ -11,20 +11,17 @@ type Props = {
   legs?: RouteLeg[];
 };
 
-const CAR_ROUTE = "#2563EB";
-const EV_ROUTE = "#16A36A";
-const PLANE_ROUTE = "#D97706";
+const ROUTE_COLORS: Record<TransportMode, string> = {
+  car: "#475569",
+  ev: "#0F766E",
+  bus: "#0891B2",
+  bike: "#16A34A",
+  walk: "#22C55E",
+  plane: "#D97706",
+};
 
-function leafletHtml(
-  origin: Place,
-  destination: Place,
-  polyline: [number, number][],
-  mode: TransportMode,
-  legs?: RouteLeg[],
-): string {
-  const drawLegs = legs?.length
-    ? legs.map((leg) => ({ mode: leg.mode, polyline: leg.polyline }))
-    : [{ mode, polyline }];
+function leafletHtml(origin: Place, destination: Place, polyline: [number, number][], mode: TransportMode, legs?: RouteLeg[]): string {
+  const drawLegs = legs?.length ? legs.map((leg) => ({ mode: leg.mode, polyline: leg.polyline })) : [{ mode, polyline }];
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -47,16 +44,14 @@ function leafletHtml(
     const destination = ${JSON.stringify(destination)};
     const polyline = ${JSON.stringify(polyline)};
     const legs = ${JSON.stringify(drawLegs)};
+    const colors = ${JSON.stringify(ROUTE_COLORS)};
     const map = L.map('map', { zoomControl: true, attributionControl: true, preferCanvas: true });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap',
-      maxZoom: 18,
-      updateWhenIdle: true,
-      updateWhenZooming: false
+      attribution: '&copy; OpenStreetMap', maxZoom: 18, updateWhenIdle: true, updateWhenZooming: false
     }).addTo(map);
     for (const leg of legs) {
       L.polyline(leg.polyline, {
-        color: leg.mode === 'plane' ? '${PLANE_ROUTE}' : leg.mode === 'ev' ? '${EV_ROUTE}' : '${CAR_ROUTE}',
+        color: colors[leg.mode] || '${ROUTE_COLORS.car}',
         weight: leg.mode === 'plane' ? 4 : 5,
         opacity: 0.94,
         smoothFactor: leg.mode === 'plane' ? 0.3 : 1,
@@ -69,7 +64,7 @@ function leafletHtml(
     const iconB = L.divIcon({ className: '', html: '<div class="pin pin-b"></div>', iconSize: [14, 14], iconAnchor: [7, 7] });
     L.marker([origin.lat, origin.lng], { icon: iconA, title: origin.label }).addTo(map);
     L.marker([destination.lat, destination.lng], { icon: iconB, title: destination.label }).addTo(map);
-    map.fitBounds(boundsLine.getBounds(), { padding: [28, 28] });
+    if (boundsLine.getBounds().isValid()) map.fitBounds(boundsLine.getBounds(), { padding: [28, 28] });
     map.removeLayer(boundsLine);
   </script>
 </body>
@@ -78,18 +73,7 @@ function leafletHtml(
 
 export function RouteMap({ origin, destination, polyline, mode, legs }: Props) {
   if (!polyline.length) return null;
-  return (
-    <WebView
-      originWhitelist={["*"]}
-      source={{ html: leafletHtml(origin, destination, polyline, mode, legs) }}
-      style={styles.fill}
-    />
-  );
+  return <WebView originWhitelist={["*"]} source={{ html: leafletHtml(origin, destination, polyline, mode, legs) }} style={styles.fill} />;
 }
 
-const styles = StyleSheet.create({
-  fill: {
-    flex: 1,
-    backgroundColor: colors.white,
-  },
-});
+const styles = StyleSheet.create({ fill: { flex: 1, backgroundColor: colors.white } });
