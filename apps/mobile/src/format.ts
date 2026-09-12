@@ -1,6 +1,12 @@
 import type { TransportMode } from "@carbonroute/shared";
 
+export type MeasurementSystem = "metric" | "imperial";
+
 const ROAD_WORDS = /\b(?:street|st|road|rd|avenue|ave|lane|ln|drive|dr|boulevard|blvd|court|ct|circle|cir|way|highway|hwy|parkway|pkwy|place|pl|terrace|ter|trail|trl)\.?$/i;
+const KM_TO_MILES = 0.6213711922;
+const KG_TO_POUNDS = 2.2046226218;
+const GRAMS_PER_POUND = 453.59237;
+const KM_PER_MILE = 1.609344;
 
 export function placeDisplayLabel(label: string): string {
   const parts = label
@@ -24,15 +30,29 @@ export function placeDisplayLabel(label: string): string {
   return parts[0];
 }
 
-export function formatKg(kg: number): string {
-  if (kg >= 100) return `${Math.round(kg)} kg`;
-  if (kg >= 10) return `${kg.toFixed(1)} kg`;
-  return `${kg.toFixed(2)} kg`;
+function formatMass(value: number, unit: "kg" | "lb"): string {
+  if (value >= 100) return `${Math.round(value)} ${unit}`;
+  if (value >= 10) return `${value.toFixed(1)} ${unit}`;
+  return `${value.toFixed(2)} ${unit}`;
 }
 
-export function formatKm(km: number): string {
-  if (km >= 100) return `${Math.round(km)} km`;
-  return `${km.toFixed(1)} km`;
+export function formatKg(kg: number, system: MeasurementSystem = "metric"): string {
+  return system === "imperial" ? formatMass(kg * KG_TO_POUNDS, "lb") : formatMass(kg, "kg");
+}
+
+export function formatKm(km: number, system: MeasurementSystem = "metric"): string {
+  const value = system === "imperial" ? km * KM_TO_MILES : km;
+  const unit = system === "imperial" ? "mi" : "km";
+  if (value >= 100) return `${Math.round(value)} ${unit}`;
+  return `${value.toFixed(1)} ${unit}`;
+}
+
+export function formatFactor(gPerKm: number, system: MeasurementSystem = "metric"): string {
+  if (system === "imperial") {
+    const lbPerMile = (gPerKm * KM_PER_MILE) / GRAMS_PER_POUND;
+    return `${lbPerMile.toFixed(3)} lb/mi`;
+  }
+  return `${gPerKm} g/km`;
 }
 
 export function formatDuration(min: number): string {
@@ -54,10 +74,13 @@ export function modeLabel(mode: TransportMode): string {
   return "Train";
 }
 
-export function vsDrivingCopy(vsDrivingKg: number | null | undefined): string | null {
+export function vsDrivingCopy(
+  vsDrivingKg: number | null | undefined,
+  system: MeasurementSystem = "metric",
+): string | null {
   if (vsDrivingKg == null) return null;
   const abs = Math.abs(vsDrivingKg);
-  const amount = formatKg(abs);
+  const amount = formatKg(abs, system);
   if (vsDrivingKg < 0) return `${amount} less than the same trip by car`;
   if (vsDrivingKg > 0) return `${amount} more than driving`;
   return "Same CO₂e as driving this distance";
