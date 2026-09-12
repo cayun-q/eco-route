@@ -1,23 +1,23 @@
 export const colors = {
-  bg: "#F2EEE4",
-  surface: "#F7F4EC",
-  surfaceMuted: "#E8E2D6",
-  ink: "#2C2A26",
-  muted: "#6B6558",
-  line: "#D4CDBF",
-  accent: "#4A6741",
-  accentSoft: "#DDE5D4",
-  accentText: "#2F3F2C",
-  accentPressed: "#3A5234",
-  warn: "#B5812C",
-  warnSoft: "#EFE0C4",
-  danger: "#9B2C2C",
-  clay: "#A65D3F",
+  bg: "#F4F7F1",
+  surface: "#FFFFFF",
+  surfaceMuted: "#E9F0E9",
+  ink: "#17352A",
+  muted: "#66786E",
+  line: "#CDDCCF",
+  accent: "#2F6B4F",
+  accentSoft: "#DCECE2",
+  accentText: "#24533D",
+  accentPressed: "#25583F",
+  warn: "#B8872F",
+  warnSoft: "#F1E6CB",
+  danger: "#A33A3A",
+  clay: "#A66048",
   white: "#FFFFFF",
   mode: {
-    car: "#6E7340",
-    plane: "#A65D3F",
-    train: "#3D5560",
+    car: "#3F7658",
+    plane: "#B06A45",
+    train: "#45666A",
   },
 } as const;
 
@@ -31,9 +31,9 @@ export const space = {
 } as const;
 
 export const radius = {
-  card: 8,
-  chip: 8,
-  button: 8,
+  card: 10,
+  chip: 10,
+  button: 10,
 } as const;
 
 export const type = {
@@ -47,9 +47,9 @@ export const type = {
 export const shadow = {
   hard: {
     shadowColor: colors.ink,
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 0,
+    shadowOffset: { width: 1, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 2,
     elevation: 2,
   },
 } as const;
