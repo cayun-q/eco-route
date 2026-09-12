@@ -61,10 +61,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           destLat: item.destLat,
           destLng: item.destLng,
           mode: item.mode,
+          logMethod: item.logMethod,
           distanceKm: item.distanceKm,
           durationMin: item.durationMin,
           co2eKg: item.co2eKg,
           polyline: item.polyline,
+          legs: item.legs,
           factorGPerKm: item.factorGPerKm,
           factorSource: item.factorSource,
         });
