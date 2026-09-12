@@ -1,8 +1,9 @@
+import { useMemo } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation";
 import type { RouteEstimate } from "@carbonroute/shared";
-import { colors, space, type as font } from "../theme";
+import { colorsForTheme, space, type as font, type ThemeColors } from "../theme";
 import { Button, Heading, Muted, Screen } from "../ui";
 import { MapPreview } from "../components/MapPreview";
 import { formatDate, formatDuration, formatFactor, formatKg, formatKm, modeLabel, placeDisplayLabel } from "../format";
@@ -11,7 +12,8 @@ import { useStore } from "../store";
 type Props = NativeStackScreenProps<RootStackParamList, "TripDetail">;
 
 export function TripDetailScreen({ navigation, route }: Props) {
-  const { measurementSystem } = useStore();
+  const { measurementSystem, displayPrecision, resolvedTheme } = useStore();
+  const styles = useMemo(() => makeStyles(colorsForTheme(resolvedTheme)), [resolvedTheme]);
   const { trip } = route.params;
   const estimate: RouteEstimate = {
     origin: { label: trip.originLabel, lat: trip.originLat, lng: trip.originLng },
@@ -31,23 +33,17 @@ export function TripDetailScreen({ navigation, route }: Props) {
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.wrap}>
-        <Heading>
-          {placeDisplayLabel(trip.originLabel)} → {placeDisplayLabel(trip.destinationLabel)}
-        </Heading>
-        <Muted>
-          {trip.logMethod === "manual" ? "Manual itinerary" : modeLabel(trip.mode)} · {formatDate(trip.createdAt)}
-          {trip.pending ? " · queued" : ""}
-        </Muted>
-
+        <Heading>{placeDisplayLabel(trip.originLabel)} → {placeDisplayLabel(trip.destinationLabel)}</Heading>
+        <Muted>{trip.logMethod === "manual" ? "Manual itinerary" : modeLabel(trip.mode)} · {formatDate(trip.createdAt)}{trip.pending ? " · queued" : ""}</Muted>
         <MapPreview estimate={estimate} />
 
         <View style={styles.rows}>
-          <Row k="Logging" v={trip.logMethod === "manual" ? "Manual itinerary" : "Automatic"} />
-          <Row k="Distance" v={formatKm(trip.distanceKm, measurementSystem)} />
-          <Row k="Duration" v={formatDuration(trip.durationMin)} />
-          <Row k="CO₂e" v={formatKg(trip.co2eKg, measurementSystem)} />
-          <Row k="Factor" v={formatFactor(trip.factorGPerKm, measurementSystem)} />
-          <Row k="Source" v={trip.factorSource} />
+          <Row k="Logging" v={trip.logMethod === "manual" ? "Manual itinerary" : "Automatic"} styles={styles} />
+          <Row k="Distance" v={formatKm(trip.distanceKm, measurementSystem, displayPrecision)} styles={styles} />
+          <Row k="Duration" v={formatDuration(trip.durationMin)} styles={styles} />
+          <Row k="CO₂e" v={formatKg(trip.co2eKg, measurementSystem, displayPrecision)} styles={styles} />
+          <Row k="Factor" v={formatFactor(trip.factorGPerKm, measurementSystem, displayPrecision)} styles={styles} />
+          <Row k="Source" v={trip.factorSource} styles={styles} />
         </View>
 
         <Button label="Log another trip" onPress={() => navigation.navigate("LogTrip")} />
@@ -57,49 +53,16 @@ export function TripDetailScreen({ navigation, route }: Props) {
   );
 }
 
-function Row({ k, v }: { k: string; v: string }) {
-  return (
-    <View style={styles.row}>
-      <Text style={styles.k}>{k}</Text>
-      <Text style={styles.v}>{v}</Text>
-    </View>
-  );
+function Row({ k, v, styles }: { k: string; v: string; styles: ReturnType<typeof makeStyles> }) {
+  return <View style={styles.row}><Text style={styles.k}>{k}</Text><Text style={styles.v}>{v}</Text></View>;
 }
 
-const styles = StyleSheet.create({
-  wrap: {
-    padding: space.lg,
-    paddingTop: space.xl,
-    maxWidth: 520,
-    width: "100%",
-    alignSelf: "center",
-    gap: space.md,
-    paddingBottom: 48,
-  },
-  rows: {
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.surface,
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: space.md,
-    paddingHorizontal: space.md,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.line,
-  },
-  k: {
-    fontFamily: font.body,
-    fontSize: 14,
-    color: colors.muted,
-  },
-  v: {
-    fontFamily: font.bodyMed,
-    fontSize: 14,
-    color: colors.ink,
-    flexShrink: 1,
-    textAlign: "right",
-  },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    wrap: { padding: space.lg, paddingTop: space.xl, maxWidth: 520, width: "100%", alignSelf: "center", gap: space.md, paddingBottom: 48 },
+    rows: { borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
+    row: { flexDirection: "row", justifyContent: "space-between", gap: space.md, paddingHorizontal: space.md, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.line },
+    k: { fontFamily: font.body, fontSize: 14, color: colors.muted },
+    v: { fontFamily: font.bodyMed, fontSize: 14, color: colors.ink, flexShrink: 1, textAlign: "right" },
+  });
+}
