@@ -38,6 +38,7 @@ type Preferences = {
   themePreference: ThemePreference;
   displayPrecision: DisplayPrecision;
   showDrivingComparison: boolean;
+  showHiddenOptions: boolean;
   recentTrips: RecentTripsPreference;
 };
 
@@ -47,6 +48,7 @@ const DEFAULT_PREFERENCES: Preferences = {
   themePreference: "system",
   displayPrecision: "simple",
   showDrivingComparison: true,
+  showHiddenOptions: false,
   recentTrips: 10,
 };
 
@@ -78,12 +80,14 @@ type Store = {
   resolvedTheme: ResolvedTheme;
   displayPrecision: DisplayPrecision;
   showDrivingComparison: boolean;
+  showHiddenOptions: boolean;
   recentTrips: RecentTripsPreference;
   setMeasurementSystem: (value: MeasurementSystem) => Promise<void>;
   setDefaultLoggingMethod: (value: LogMethod) => Promise<void>;
   setThemePreference: (value: ThemePreference) => Promise<void>;
   setDisplayPrecision: (value: DisplayPrecision) => Promise<void>;
   setShowDrivingComparison: (value: boolean) => Promise<void>;
+  setShowHiddenOptions: (value: boolean) => Promise<void>;
   setRecentTrips: (value: RecentTripsPreference) => Promise<void>;
   refresh: () => Promise<void>;
   saveTrip: (input: TripInput) => Promise<Trip>;
@@ -141,6 +145,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const setThemePreference = useCallback(async (value: ThemePreference) => { await updatePreference("themePreference", value); }, [updatePreference]);
   const setDisplayPrecision = useCallback(async (value: DisplayPrecision) => { setDefaultDisplayPrecision(value); await updatePreference("displayPrecision", value); }, [updatePreference]);
   const setShowDrivingComparison = useCallback(async (value: boolean) => { setDefaultShowDrivingComparison(value); await updatePreference("showDrivingComparison", value); }, [updatePreference]);
+  const setShowHiddenOptions = useCallback(async (value: boolean) => { await updatePreference("showHiddenOptions", value); }, [updatePreference]);
   const setRecentTrips = useCallback(async (value: RecentTripsPreference) => { await updatePreference("recentTrips", value); }, [updatePreference]);
 
   const resolvedTheme: ResolvedTheme = preferences.themePreference === "system" ? systemScheme === "dark" ? "dark" : "light" : preferences.themePreference;
@@ -233,10 +238,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     resolvedTheme,
     displayPrecision: preferences.displayPrecision,
     showDrivingComparison: preferences.showDrivingComparison,
+    showHiddenOptions: preferences.showHiddenOptions,
     recentTrips: preferences.recentTrips,
     setMeasurementSystem, setDefaultLoggingMethod, setThemePreference, setDisplayPrecision,
-    setShowDrivingComparison, setRecentTrips, refresh, saveTrip, deleteTrip, clearTrips,
-  }), [trips, stats, factors, online, loading, error, lastRefreshedAt, preferencesLoaded, preferences, resolvedTheme, setMeasurementSystem, setDefaultLoggingMethod, setThemePreference, setDisplayPrecision, setShowDrivingComparison, setRecentTrips, refresh, saveTrip, deleteTrip, clearTrips]);
+    setShowDrivingComparison, setShowHiddenOptions, setRecentTrips, refresh, saveTrip, deleteTrip, clearTrips,
+  }), [trips, stats, factors, online, loading, error, lastRefreshedAt, preferencesLoaded, preferences, resolvedTheme, setMeasurementSystem, setDefaultLoggingMethod, setThemePreference, setDisplayPrecision, setShowDrivingComparison, setShowHiddenOptions, setRecentTrips, refresh, saveTrip, deleteTrip, clearTrips]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
