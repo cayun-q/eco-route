@@ -158,5 +158,8 @@ export async function routeBetween(
     }
   }
 
-  return { ...mockRoute(origin, dest, mode), provider: "haversine" };
+  throw Object.assign(
+    new Error("No drivable route exists between these locations. Try Plane or choose destinations connected by roads."),
+    { status: 422 },
+  );
 }
