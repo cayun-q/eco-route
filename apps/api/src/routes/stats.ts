@@ -6,16 +6,10 @@ export const statsRouter = Router();
 
 statsRouter.get("/", async (_req, res, next) => {
   try {
-    const { rows } = await pool.query<{
-      mode: TransportMode;
-      count: string;
-      co2e: string;
-    }>(
-      "SELECT mode, COUNT(*)::text AS count, COALESCE(SUM(co2e_kg), 0)::text AS co2e FROM trips WHERE mode IN ('car', 'ev', 'plane') GROUP BY mode",
+    const { rows } = await pool.query<{ mode: TransportMode; count: string; co2e: string }>(
+      "SELECT mode, COUNT(*)::text AS count, COALESCE(SUM(co2e_kg), 0)::text AS co2e FROM trips WHERE mode IN ('car', 'ev', 'bus', 'bike', 'walk', 'plane') GROUP BY mode",
     );
-    const byMode = Object.fromEntries(
-      MODES.map((mode) => [mode, { count: 0, co2eKg: 0 }]),
-    ) as Record<TransportMode, { count: number; co2eKg: number }>;
+    const byMode = Object.fromEntries(MODES.map((mode) => [mode, { count: 0, co2eKg: 0 }])) as Record<TransportMode, { count: number; co2eKg: number }>;
     let tripCount = 0;
     let totalCo2eKg = 0;
     for (const row of rows) {
@@ -25,11 +19,7 @@ statsRouter.get("/", async (_req, res, next) => {
       tripCount += count;
       totalCo2eKg += co2eKg;
     }
-    res.json({
-      tripCount,
-      totalCo2eKg: Math.round(totalCo2eKg * 1000) / 1000,
-      byMode,
-    });
+    res.json({ tripCount, totalCo2eKg: Math.round(totalCo2eKg * 1000) / 1000, byMode });
   } catch (err) {
     next(err);
   }
