@@ -3,13 +3,14 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { RouteEstimate, TransportMode } from "@carbonroute/shared";
+import type { Place, RouteEstimate, TransportMode } from "@carbonroute/shared";
 import type { RootStackParamList } from "../navigation";
 import { api } from "../api";
 import { offlineEstimate } from "../offline";
@@ -22,6 +23,90 @@ import { vsDrivingCopy } from "../format";
 type Props = NativeStackScreenProps<RootStackParamList, "LogTrip">;
 
 const MODES: TransportMode[] = ["car", "plane"];
+
+type AddressSearchProps = {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+};
+
+function AddressSearch({ label, value, onChange, placeholder }: AddressSearchProps) {
+  const [suggestions, setSuggestions] = useState<Place[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [dismissedValue, setDismissedValue] = useState<string | null>(null);
+
+  useEffect(() => {
+    const query = value.trim();
+    if (query.length < 3 || dismissedValue === value) {
+      setSuggestions([]);
+      setSearching(false);
+      return;
+    }
+
+    let cancelled = false;
+    setSearching(true);
+    const handle = setTimeout(async () => {
+      try {
+        const result = await api.searchPlaces(query);
+        if (!cancelled) setSuggestions(result.places);
+      } catch {
+        if (!cancelled) setSuggestions([]);
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [value, dismissedValue]);
+
+  function change(next: string) {
+    setDismissedValue(null);
+    onChange(next);
+  }
+
+  function choose(place: Place) {
+    setDismissedValue(place.label);
+    setSuggestions([]);
+    onChange(place.label);
+  }
+
+  return (
+    <View style={styles.addressSearch}>
+      <Field
+        label={label}
+        value={value}
+        onChangeText={change}
+        placeholder={placeholder}
+        autoCapitalize="words"
+        autoComplete="street-address"
+      />
+      {searching ? <Text style={styles.searchStatus}>Searching addresses…</Text> : null}
+      {suggestions.length ? (
+        <View style={styles.suggestions}>
+          {suggestions.map((place, index) => (
+            <Pressable
+              key={`${place.lat}:${place.lng}:${place.label}`}
+              onPress={() => choose(place)}
+              style={({ pressed }) => [
+                styles.suggestion,
+                index > 0 && styles.suggestionBorder,
+                pressed && styles.suggestionPressed,
+              ]}
+            >
+              <Text style={styles.suggestionText} numberOfLines={2}>
+                {place.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
 
 export function LogTripScreen({ navigation }: Props) {
   const { factors, saveTrip } = useStore();
@@ -67,7 +152,7 @@ export function LogTripScreen({ navigation }: Props) {
       } finally {
         if (!cancelled) setEstimating(false);
       }
-    }, 450);
+    }, 700);
     return () => {
       cancelled = true;
       clearTimeout(handle);
@@ -109,21 +194,19 @@ export function LogTripScreen({ navigation }: Props) {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.wrap} keyboardShouldPersistTaps="handled">
           <Heading>Log trip</Heading>
-          <Muted>Enter origin and destination first. The map appears only after both ends are set.</Muted>
+          <Muted>Search a city, street, or full address. Choose a suggestion for the most precise route.</Muted>
 
-          <Field
+          <AddressSearch
             label="Origin"
             value={origin}
-            onChangeText={setOrigin}
-            placeholder="Portland, OR"
-            autoCapitalize="words"
+            onChange={setOrigin}
+            placeholder="17 Billings St, Pittsburgh, PA"
           />
-          <Field
+          <AddressSearch
             label="Destination"
             value={destination}
-            onChangeText={setDestination}
-            placeholder="Seattle, WA"
-            autoCapitalize="words"
+            onChange={setDestination}
+            placeholder="5000 Forbes Ave, Pittsburgh, PA"
           />
 
           <Text style={styles.modeLabel}>Mode</Text>
@@ -193,6 +276,42 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     gap: space.md,
     paddingBottom: 48,
+  },
+  addressSearch: {
+    gap: 4,
+    position: "relative",
+    zIndex: 10,
+  },
+  searchStatus: {
+    fontFamily: font.body,
+    fontSize: 12,
+    color: colors.muted,
+    paddingHorizontal: 2,
+  },
+  suggestions: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  suggestion: {
+    paddingHorizontal: space.md,
+    paddingVertical: 11,
+    backgroundColor: colors.surface,
+  },
+  suggestionBorder: {
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+  },
+  suggestionPressed: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  suggestionText: {
+    fontFamily: font.body,
+    fontSize: 14,
+    lineHeight: 19,
+    color: colors.ink,
   },
   modeLabel: {
     fontFamily: font.bodyMed,
