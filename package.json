@@ -7,14 +7,12 @@
     "packages/shared"
   ],
   "scripts": {
-    "dev": "npm run dev -w @carbonroute/api",
-    "api": "npm run dev -w @carbonroute/api",
-    "mobile": "npm run start -w @carbonroute/mobile",
-    "mobile:web": "npm run web -w @carbonroute/mobile",
-    "db:migrate": "npm run migrate -w @carbonroute/api",
-    "db:seed": "npm run seed -w @carbonroute/api",
-    "db:reset": "npm run reset -w @carbonroute/api",
-    "test": "npm run test --workspaces --if-present"
+    "api": "npm run dev --workspace=@carbonroute/api",
+    "api:start": "npm run start --workspace=@carbonroute/api",
+    "seed": "npm run seed --workspace=@carbonroute/api",
+    "mobile": "npm run start --workspace=@carbonroute/mobile",
+    "web": "npm run web --workspace=@carbonroute/mobile",
+    "test": "npm run test --workspace=@carbonroute/shared && npm run test --workspace=@carbonroute/api"
   },
   "engines": {
     "node": ">=20"

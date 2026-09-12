@@ -1,69 +1,73 @@
-import {
-  formatDuration,
-  formatEmissions,
-  formatMiles,
-  modeLabel,
-  subtypeLabel,
-  type Trip,
-} from "@carbonroute/shared";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, modeColor } from "../theme";
+import type { Trip } from "@carbonroute/shared";
+import { colors, radius, shadow, space, type as font } from "../theme";
+import { formatDate, formatKg, formatKm, modeLabel } from "../format";
+import { Chip } from "../ui";
 
 export function TripCard({ trip, onPress }: { trip: Trip; onPress: () => void }) {
+  const high = trip.mode === "plane" || trip.co2eKg >= 20;
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && { opacity: 0.85 }]}>
-      <View style={[styles.badge, { backgroundColor: modeColor(trip.route.mode) }]}>
-        <Text style={styles.badgeText}>{modeLabel(trip.route.mode).slice(0, 1)}</Text>
-      </View>
-      <View style={styles.meta}>
-        <Text style={styles.title} numberOfLines={1}>
-          {trip.route.origin} → {trip.route.destination}
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+    >
+      <View style={styles.top}>
+        <Text style={styles.route} numberOfLines={2}>
+          {trip.originLabel.split(",")[0]} → {trip.destinationLabel.split(",")[0]}
         </Text>
-        <Text style={styles.sub}>
-          {subtypeLabel(trip.route.subtype)} · {formatMiles(trip.route.distanceMiles)} ·{" "}
-          {formatDuration(trip.route.durationMinutes)}
-          {trip.pendingSync ? " · queued" : ""}
-        </Text>
+        <Chip label={modeLabel(trip.mode)} selected tone={trip.mode} />
       </View>
-      <Text style={styles.emissions}>{formatEmissions(trip.gramsCo2e)}</Text>
+      <Text style={styles.meta}>
+        {formatKm(trip.distanceKm)} · {formatKg(trip.co2eKg)} CO₂e
+        {trip.pending ? " · queued" : ""}
+      </Text>
+      <Text style={styles.date}>{formatDate(trip.createdAt)}</Text>
+      {high ? <Text style={styles.high}>High-emission trip</Text> : null}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: space.lg,
+    gap: 6,
+    ...shadow.hard,
+  },
+  pressed: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  top: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 12,
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: space.md,
   },
-  badge: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  badgeText: {
-    color: colors.white,
-    fontWeight: "800",
+  route: {
+    flex: 1,
+    fontFamily: font.display,
+    fontSize: 18,
+    color: colors.ink,
   },
   meta: {
-    flex: 1,
-    minWidth: 0,
-  },
-  title: {
+    fontFamily: font.bodyMed,
+    fontSize: 14,
     color: colors.ink,
-    fontWeight: "700",
-    fontSize: 15,
   },
-  sub: {
+  date: {
+    fontFamily: font.body,
+    fontSize: 13,
     color: colors.muted,
-    marginTop: 2,
-    fontSize: 12,
   },
-  emissions: {
-    color: colors.accentText,
-    fontWeight: "700",
+  high: {
+    fontFamily: font.bodyMed,
+    fontSize: 12,
+    color: colors.clay,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
 });

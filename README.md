@@ -1,126 +1,78 @@
 # CarbonRoute
 
-Mobile starter for logging travel (car, plane, train) and estimating carbon emissions from a **swappable Postgres factor table** — not hardcoded constants. The routing layer is an interface: it ships with a mock + haversine implementation so you can drop in a Mapbox or Google key later.
+Passenger trip ledger. Log origin and destination, preview the route on a map, and store CO₂e from a **Postgres factor table** — not a hardcoded g/km.
 
-```
-apps/api        Express + TypeScript REST API
-apps/mobile     Expo (React Native + TypeScript) app
-packages/shared Shared types + emission calculator
-```
+This is an Expo + Express + Postgres monorepo. The mobile app stays Expo (not Vite). The map appears **only after both ends are set**.
 
-## What you get
-
-- **Calculator** — `grams = miles × g/mile + hours × g/hour`, using the active row for that mode/subtype
-- **Emission factors** — petrol car, EV car, short-haul flight, long-haul flight, diesel train, electric train (DEFRA/EPA-style starter values)
-- **Routing stub** — city lookup + haversine for flights; mock road/rail distances. Swap via `ROUTING_PROVIDER`
-- **REST** — create trip, list trips, cumulative summary, list factors, preview an estimate
-- **Expo screens** — Home (recent + cumulative), Log a trip (optional GPS), Trip results
-- **Offline** — cached factors, queued trips, sync on reconnect
-
-## Prerequisites
-
-- Node 20+
-- Postgres 16 (Docker Compose or local)
-
-## Quick start (local Postgres)
-
-Create a database and user (defaults match `.env.example`):
+## How to run
 
 ```bash
-createdb carbonroute
-# or: docker compose up -d postgres
-```
-
-```bash
-cp apps/api/.env.example apps/api/.env
-cp apps/mobile/.env.example apps/mobile/.env
+cp .env.example .env
+docker compose up -d db
 npm install
-npm run db:migrate
-npm run db:seed
-npm run api
+npm run seed          # writes DESNZ/DEFRA 2024 factors if the table is empty
+npm run api           # Express on http://127.0.0.1:43124
+npm run web           # Expo web on http://127.0.0.1:43123
 ```
 
-In a second terminal:
+Native: `npm run mobile`, then open in Expo Go. Point `EXPO_PUBLIC_API_URL` at your machine.
 
-```bash
-npm run mobile:web          # Expo web on http://127.0.0.1:43123
-# or: npm run mobile        # Expo Go / simulator
+Without Docker, create a Postgres database and set `DATABASE_URL`. The API runs `init.sql` + `seed.sql` on boot.
+
+### Optional routing keys
+
+Leave these blank for mock geocode + haversine / great-circle polylines.
+
+| Env | Provider |
+| --- | --- |
+| `MAPBOX_ACCESS_TOKEN` | Mapbox Directions |
+| `GOOGLE_MAPS_API_KEY` | Google Directions |
+| `ORS_API_KEY` | OpenRouteService |
+
+Plane trips always use a great-circle path. Road providers apply to car and train.
+
+## Product flow
+
+1. **Home** — ledger totals and recent trips. Empty until you log one.
+2. **Log trip** — type origin and destination, pick car / plane / train.
+3. After **both** fields have values, `POST /api/routes/estimate` returns a polyline. The map then shows markers, the line, and distance / duration / CO₂e chips.
+4. **Save** → `POST /api/trips` → **Results**. Home refreshes on focus.
+5. Offline: last factor table is cached; failed saves go into a trip queue and flush when the API is reachable. Offline estimates use the same gazetteer + calculator.
+
+## Structure
+
+```
+apps/api            Express + Postgres
+  db/init.sql       schema
+  db/seed.sql       emission_factors (DESNZ/DEFRA 2024)
+  src/routes        /api/health, /factors, /routes/estimate, /trips, /stats
+  src/services      geocode, routing, emissions calculator
+apps/mobile         Expo (iOS / Android / web)
+  src/theme.ts      eco-rough tokens
+  src/ui.tsx        Card, Button, Chip, EmptyState, Field
+  src/screens       Home, LogTrip, Results, TripDetail
+  src/components    TripCard, RouteMap, MapPreview
+  src/offline.ts    factor cache + trip queue
+packages/shared     types, kgFromDistance, haversine, gazetteer
 ```
 
-API listens on **http://127.0.0.1:43124**.
+## API
 
-On a physical phone, set `EXPO_PUBLIC_API_URL` in `apps/mobile/.env` to your computer’s LAN IP (`http://192.168.x.x:43124`), then restart Expo.
-
-### Reset the database
-
-```bash
-npm run db:reset
-```
-
-## Docker Compose
-
-```bash
-docker compose up --build
-```
-
-This starts Postgres and the API. Run Expo on the host as above. The API container still uses `ROUTING_PROVIDER=mock` unless you export Mapbox/Google keys.
-
-## REST
-
-| Method | Path | Purpose |
+| Method | Path | Notes |
 | --- | --- | --- |
-| `GET` | `/api/health` | Liveness + active routing provider |
-| `GET` | `/api/emission-factors` | Active factor table (mobile caches this) |
-| `POST` | `/api/routes/estimate` | Preview emissions without saving |
-| `POST` | `/api/trips` | Create a trip (`clientId` is idempotent for offline sync) |
-| `GET` | `/api/trips` | Recent trips |
-| `GET` | `/api/trips/summary` | Cumulative totals by mode |
-| `GET` | `/api/trips/:id` | One trip |
+| GET | `/api/health` | DB ping |
+| GET | `/api/factors` | Factor table for the offline cache |
+| POST | `/api/routes/estimate` | `{ origin, destination, mode }` → places, polyline, distance, duration, `co2eKg`, factor used, `provider` |
+| GET | `/api/trips` | Recent trips |
+| POST | `/api/trips` | Persist a logged trip |
+| GET | `/api/trips/:id` | One trip |
+| GET | `/api/stats` | Totals for Home |
 
-Example:
+Emissions: `co2eKg = distanceKm * factor.gPerKm / 1000`. The grams-per-km value is loaded from `emission_factors`.
 
-```bash
-curl -s http://127.0.0.1:43124/api/routes/estimate \
-  -H 'content-type: application/json' \
-  -d '{"origin":"London","destination":"Paris","mode":"plane"}'
-```
+## Eco-rough UI
 
-## Plug in Mapbox or Google
-
-1. Copy `apps/api/.env.example` → `apps/api/.env`
-2. Set one of:
-
-```bash
-ROUTING_PROVIDER=mapbox
-MAPBOX_ACCESS_TOKEN=pk.your_token
-```
-
-```bash
-ROUTING_PROVIDER=google
-GOOGLE_MAPS_API_KEY=your_key
-```
-
-3. Restart the API.
-
-Behavior:
-
-- **Car / train** — Mapbox Directions or Google Directions when a key is present
-- **Plane** — always great-circle **haversine** (ICAO-style), even with a key
-- **Missing key or API error** — falls back to the mock provider
-
-No mobile code change is required. The app already posts origin/destination (and optional GPS coords) to the same estimate/create endpoints.
-
-## Domain model
-
-1. **Route** — origin, destination, mode, distance, duration
-2. **EmissionFactor** — mode, subtype, g CO₂e per mile and/or per hour, source, year
-3. **Trip** — logged route + calculated emissions + the factor row used
-
-Schema: `apps/api/src/db/migrations/001_init.sql`  
-Seed: `apps/api/src/db/seed.ts`  
-Calc: `packages/shared/src/calculator.ts`
-
-Update factors by inserting new rows (or re-seeding). The calculator always reads the active table.
+Paper field-notebook: `#F2EEE4` ground, moss accent `#4A6741`, clay `#A65D3F` for high-emission chips. Cards are radius 8 with a 1px line and a hard 2px offset — no blur. Primary buttons are flat moss and darken on press. Chips are chunky; selected state is accent. Empty states are title + body only. Map chrome is paper / moss; map tiles stay white. Screens use theme tokens only.
 
 ## Tests
 
@@ -128,14 +80,4 @@ Update factors by inserting new rows (or re-seeding). The calculator always read
 npm test
 ```
 
-## Scripts
-
-| Script | What it does |
-| --- | --- |
-| `npm run api` | Start the API with reload |
-| `npm run mobile` | Expo dev server |
-| `npm run mobile:web` | Expo web (port 43123) |
-| `npm run db:migrate` | Apply SQL migrations |
-| `npm run db:seed` | Upsert starter emission factors |
-| `npm run db:reset` | Drop + migrate + seed |
-| `npm test` | Calculator + routing unit tests |
+Shared tests cover the calculator and polyline helpers. They fail if someone hardcodes g/km into `kgFromDistance`.
