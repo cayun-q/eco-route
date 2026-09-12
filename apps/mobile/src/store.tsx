@@ -23,7 +23,6 @@ const emptyStats = (): TripStats => ({
   byMode: {
     car: { count: 0, co2eKg: 0 },
     plane: { count: 0, co2eKg: 0 },
-    train: { count: 0, co2eKg: 0 },
   },
 });
 
@@ -75,6 +74,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refresh = useCallback(async () => {
+    setLoading(true);
     const cached = await readCachedFactors();
     if (cached.length) setFactors(cached);
     const queued = await readQueue();
