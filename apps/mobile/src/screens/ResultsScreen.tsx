@@ -18,20 +18,21 @@ export function ResultsScreen({ navigation, route }: Props) {
     distanceKm: trip.distanceKm,
     durationMin: trip.durationMin,
     polyline: trip.polyline,
+    legs: trip.legs,
     co2eKg: trip.co2eKg,
     factor: { mode: trip.mode, gPerKm: trip.factorGPerKm, source: trip.factorSource },
     drivingCo2eKg: null,
     vsDrivingKg: null,
-    provider: "haversine",
+    provider: trip.legs?.some((leg) => leg.mode === "plane") ? "haversine" : "osrm",
   };
 
   return (
     <Screen>
       <View style={styles.wrap}>
         <Text style={styles.kicker}>{trip.pending ? "Queued on device" : "On the ledger"}</Text>
-        <Heading>Trip logged</Heading>
+        <Heading>{trip.logMethod === "manual" ? "Itinerary logged" : "Trip logged"}</Heading>
         <Muted>
-          {modeLabel(trip.mode)} from {trip.originLabel.split(",")[0]} to {trip.destinationLabel.split(",")[0]}.
+          {trip.logMethod === "manual" ? "Manual itinerary" : modeLabel(trip.mode)} from {trip.originLabel.split(",")[0]} to {trip.destinationLabel.split(",")[0]}.
         </Muted>
 
         <View style={styles.hero}>
