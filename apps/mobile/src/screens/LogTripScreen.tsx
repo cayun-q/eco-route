@@ -20,10 +20,10 @@ import type {
 import type { RootStackParamList } from "../navigation";
 import { api } from "../api";
 import { useStore } from "../store";
-import { colors, space, type as font } from "../theme";
+import { colorsForTheme, space, type as font, type ThemeColors } from "../theme";
 import { Button, Chip, Field, Heading, Muted, Screen } from "../ui";
 import { MapPreview } from "../components/MapPreview";
-import { vsDrivingCopy } from "../format";
+import { formatFactor, vsDrivingCopy } from "../format";
 
 type Props = NativeStackScreenProps<RootStackParamList, "LogTrip">;
 
@@ -39,6 +39,8 @@ type AddressSearchProps = {
 };
 
 function AddressSearch({ label, value, onChange, placeholder }: AddressSearchProps) {
+  const { resolvedTheme } = useStore();
+  const styles = useMemo(() => makeStyles(colorsForTheme(resolvedTheme)), [resolvedTheme]);
   const [suggestions, setSuggestions] = useState<Place[]>([]);
   const [searching, setSearching] = useState(false);
   const [dismissedValue, setDismissedValue] = useState<string | null>(null);
@@ -83,14 +85,7 @@ function AddressSearch({ label, value, onChange, placeholder }: AddressSearchPro
 
   return (
     <View style={styles.addressSearch}>
-      <Field
-        label={label}
-        value={value}
-        onChangeText={change}
-        placeholder={placeholder}
-        autoCapitalize="words"
-        autoComplete="street-address"
-      />
+      <Field label={label} value={value} onChangeText={change} placeholder={placeholder} autoCapitalize="words" autoComplete="street-address" />
       {searching ? <Text style={styles.searchStatus}>Searching…</Text> : null}
       {suggestions.length ? (
         <View style={styles.suggestions}>
@@ -98,15 +93,9 @@ function AddressSearch({ label, value, onChange, placeholder }: AddressSearchPro
             <Pressable
               key={`${place.lat}:${place.lng}:${place.label}`}
               onPress={() => choose(place)}
-              style={({ pressed }) => [
-                styles.suggestion,
-                index > 0 && styles.suggestionBorder,
-                pressed && styles.suggestionPressed,
-              ]}
+              style={({ pressed }) => [styles.suggestion, index > 0 && styles.suggestionBorder, pressed && styles.suggestionPressed]}
             >
-              <Text style={styles.suggestionText} numberOfLines={2}>
-                {place.label}
-              </Text>
+              <Text style={styles.suggestionText} numberOfLines={2}>{place.label}</Text>
             </Pressable>
           ))}
         </View>
@@ -124,18 +113,27 @@ function shortLabel(label: string): string {
 }
 
 export function LogTripScreen({ navigation }: Props) {
-  const { saveTrip } = useStore();
-  const [logMethod, setLogMethod] = useState<LogMethod>("automatic");
+  const {
+    saveTrip,
+    defaultLoggingMethod,
+    preferencesLoaded,
+    measurementSystem,
+    displayPrecision,
+    resolvedTheme,
+  } = useStore();
+  const colors = colorsForTheme(resolvedTheme);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const [logMethod, setLogMethod] = useState<LogMethod>(defaultLoggingMethod);
+
+  useEffect(() => {
+    if (preferencesLoaded) setLogMethod(defaultLoggingMethod);
+  }, [preferencesLoaded, defaultLoggingMethod]);
 
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
   const [mode, setMode] = useState<TransportMode>("car");
   const [carStatus, setCarStatus] = useState<CarStatus>("idle");
-
-  const [manualLegs, setManualLegs] = useState<ManualLegDraft[]>([
-    { origin: "", destination: "", mode: "car" },
-  ]);
-
+  const [manualLegs, setManualLegs] = useState<ManualLegDraft[]>([{ origin: "", destination: "", mode: "car" }]);
   const [estimate, setEstimate] = useState<RouteEstimate | null>(null);
   const [estimating, setEstimating] = useState(false);
   const [estimateError, setEstimateError] = useState<string | null>(null);
@@ -225,7 +223,10 @@ export function LogTripScreen({ navigation }: Props) {
     };
   }, [origin, destination, mode, bothEnds, carStatus, logMethod]);
 
-  const compare = useMemo(() => vsDrivingCopy(estimate?.vsDrivingKg), [estimate]);
+  const compare = useMemo(
+    () => vsDrivingCopy(estimate?.vsDrivingKg, measurementSystem, displayPrecision),
+    [estimate, measurementSystem, displayPrecision],
+  );
 
   function updateManualLeg(index: number, patch: Partial<ManualLegDraft>) {
     setEstimate(null);
@@ -248,11 +249,7 @@ export function LogTripScreen({ navigation }: Props) {
     setEstimateError(null);
     setManualLegs((current) => [
       ...current,
-      {
-        origin: current[current.length - 1]?.destination ?? "",
-        destination: "",
-        mode: "car",
-      },
+      { origin: current[current.length - 1]?.destination ?? "", destination: "", mode: "car" },
     ]);
   }
 
@@ -296,10 +293,9 @@ export function LogTripScreen({ navigation }: Props) {
           durationMin: result.durationMin,
           polyline: result.polyline,
           provider: result.provider,
-          summary:
-            draft.mode === "plane"
-              ? `Fly ${shortLabel(result.origin.label)} → ${shortLabel(result.destination.label)}`
-              : `Drive ${shortLabel(result.origin.label)} → ${shortLabel(result.destination.label)}`,
+          summary: draft.mode === "plane"
+            ? `Fly ${shortLabel(result.origin.label)} → ${shortLabel(result.destination.label)}`
+            : `Drive ${shortLabel(result.origin.label)} → ${shortLabel(result.destination.label)}`,
         };
         routedLegs.push(leg);
         totalDistanceKm += result.distanceKm;
@@ -388,18 +384,8 @@ export function LogTripScreen({ navigation }: Props) {
 
           {logMethod === "automatic" ? (
             <>
-              <AddressSearch
-                label="Origin"
-                value={origin}
-                onChange={setOrigin}
-                placeholder="17 Billings St, Pittsburgh, PA"
-              />
-              <AddressSearch
-                label="Destination"
-                value={destination}
-                onChange={setDestination}
-                placeholder="5000 Forbes Ave, Pittsburgh, PA"
-              />
+              <AddressSearch label="Origin" value={origin} onChange={setOrigin} placeholder="17 Billings St, Pittsburgh, PA" />
+              <AddressSearch label="Destination" value={destination} onChange={setDestination} placeholder="5000 Forbes Ave, Pittsburgh, PA" />
 
               <Text style={styles.modeLabel}>Mode</Text>
               <View style={styles.modes}>
@@ -414,12 +400,8 @@ export function LogTripScreen({ navigation }: Props) {
                   />
                 ))}
               </View>
-              {carStatus === "checking" && bothEnds ? (
-                <Text style={styles.modeHint}>Checking whether a road route exists…</Text>
-              ) : null}
-              {carStatus === "unavailable" ? (
-                <Text style={styles.modeUnavailable}>Car unavailable · no continuous drivable route between these locations.</Text>
-              ) : null}
+              {carStatus === "checking" && bothEnds ? <Text style={styles.modeHint}>Checking whether a road route exists…</Text> : null}
+              {carStatus === "unavailable" ? <Text style={styles.modeUnavailable}>Car unavailable · no continuous drivable route between these locations.</Text> : null}
 
               {!bothEnds ? (
                 <View style={styles.hold}>
@@ -435,45 +417,23 @@ export function LogTripScreen({ navigation }: Props) {
                   <View style={styles.legHeader}>
                     <Text style={styles.legHeading}>Leg {index + 1}</Text>
                     {manualLegs.length > 1 ? (
-                      <Pressable onPress={() => removeManualLeg(index)} accessibilityRole="button">
-                        <Text style={styles.removeLeg}>Remove</Text>
-                      </Pressable>
+                      <Pressable onPress={() => removeManualLeg(index)} accessibilityRole="button"><Text style={styles.removeLeg}>Remove</Text></Pressable>
                     ) : null}
                   </View>
 
                   <View style={styles.modes}>
                     {MODES.map((m) => (
-                      <Chip
-                        key={m}
-                        label={m === "car" ? "Car" : "Plane"}
-                        selected={leg.mode === m}
-                        tone={m}
-                        onPress={() => updateManualLeg(index, { mode: m })}
-                      />
+                      <Chip key={m} label={m === "car" ? "Car" : "Plane"} selected={leg.mode === m} tone={m} onPress={() => updateManualLeg(index, { mode: m })} />
                     ))}
                   </View>
 
-                  <AddressSearch
-                    label="From"
-                    value={leg.origin}
-                    onChange={(value) => updateManualLeg(index, { origin: value })}
-                    placeholder={leg.mode === "plane" ? "JFK or John F. Kennedy Airport" : "Start address"}
-                  />
-                  <AddressSearch
-                    label="To"
-                    value={leg.destination}
-                    onChange={(value) => updateManualLeg(index, { destination: value })}
-                    placeholder={leg.mode === "plane" ? "AVL or Asheville Regional Airport" : "Destination address"}
-                  />
+                  <AddressSearch label="From" value={leg.origin} onChange={(value) => updateManualLeg(index, { origin: value })} placeholder={leg.mode === "plane" ? "JFK or John F. Kennedy Airport" : "Start address"} />
+                  <AddressSearch label="To" value={leg.destination} onChange={(value) => updateManualLeg(index, { destination: value })} placeholder={leg.mode === "plane" ? "AVL or Asheville Regional Airport" : "Destination address"} />
                 </View>
               ))}
 
               <Button label="+ Add leg" variant="ghost" onPress={addManualLeg} />
-              <Button
-                label={estimating ? "Building itinerary…" : "Preview manual itinerary"}
-                onPress={() => void previewManual()}
-                disabled={estimating}
-              />
+              <Button label={estimating ? "Building itinerary…" : "Preview manual itinerary"} onPress={() => void previewManual()} disabled={estimating} />
             </View>
           )}
 
@@ -481,11 +441,7 @@ export function LogTripScreen({ navigation }: Props) {
             <View style={styles.hold}>
               <ActivityIndicator color={colors.accent} />
               <Text style={styles.holdBody}>
-                {logMethod === "manual"
-                  ? "Calculating each itinerary leg…"
-                  : mode === "plane"
-                    ? "Finding airports and flight connections…"
-                    : "Plotting the route…"}
+                {logMethod === "manual" ? "Calculating each itinerary leg…" : mode === "plane" ? "Finding airports and flight connections…" : "Plotting the route…"}
               </Text>
             </View>
           ) : null}
@@ -500,19 +456,14 @@ export function LogTripScreen({ navigation }: Props) {
                   ? "Manual itinerary · each leg calculated independently"
                   : estimate.legs?.length
                     ? "Automatic multimodal estimate · airport network + road routing"
-                    : `${estimate.factor.gPerKm} g/km · ${estimate.factor.source} · ${estimate.provider}`}
+                    : `${formatFactor(estimate.factor.gPerKm, measurementSystem, displayPrecision)} · ${estimate.factor.source} · ${estimate.provider}`}
               </Text>
               {compare && logMethod === "automatic" ? <Text style={styles.compare}>{compare}</Text> : null}
             </View>
           ) : null}
 
           {saveError ? <Text style={styles.error}>{saveError}</Text> : null}
-
-          <Button
-            label={saving ? "Saving…" : logMethod === "manual" ? "Save itinerary" : "Save trip"}
-            onPress={() => void onSave()}
-            disabled={!estimate || saving}
-          />
+          <Button label={saving ? "Saving…" : logMethod === "manual" ? "Save itinerary" : "Save trip"} onPress={() => void onSave()} disabled={!estimate || saving} />
           <Button label="Cancel" variant="ghost" onPress={() => navigation.goBack()} />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -520,144 +471,28 @@ export function LogTripScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  wrap: {
-    padding: space.lg,
-    paddingTop: space.xl,
-    maxWidth: 620,
-    width: "100%",
-    alignSelf: "center",
-    gap: space.md,
-    paddingBottom: 48,
-  },
-  methodBox: {
-    gap: space.sm,
-    padding: space.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-  },
-  addressSearch: {
-    gap: 4,
-    position: "relative",
-    zIndex: 10,
-  },
-  searchStatus: {
-    fontFamily: font.body,
-    fontSize: 12,
-    color: colors.muted,
-    paddingHorizontal: 2,
-  },
-  suggestions: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 8,
-    overflow: "hidden",
-  },
-  suggestion: {
-    paddingHorizontal: space.md,
-    paddingVertical: 11,
-    backgroundColor: colors.surface,
-  },
-  suggestionBorder: {
-    borderTopWidth: 1,
-    borderTopColor: colors.line,
-  },
-  suggestionPressed: {
-    backgroundColor: colors.surfaceMuted,
-  },
-  suggestionText: {
-    fontFamily: font.body,
-    fontSize: 14,
-    lineHeight: 19,
-    color: colors.ink,
-  },
-  modeLabel: {
-    fontFamily: font.bodyMed,
-    fontSize: 13,
-    color: colors.muted,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginTop: space.xs,
-  },
-  modes: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: space.sm,
-  },
-  modeHint: {
-    fontFamily: font.body,
-    fontSize: 12,
-    color: colors.muted,
-    marginTop: -space.sm,
-  },
-  modeUnavailable: {
-    fontFamily: font.bodyMed,
-    fontSize: 12,
-    color: colors.danger,
-    marginTop: -space.sm,
-  },
-  manualWrap: {
-    gap: space.md,
-  },
-  legEditor: {
-    gap: space.sm,
-    padding: space.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-  },
-  legHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  legHeading: {
-    fontFamily: font.display,
-    fontSize: 18,
-    color: colors.ink,
-  },
-  removeLeg: {
-    fontFamily: font.bodyMed,
-    fontSize: 13,
-    color: colors.danger,
-  },
-  hold: {
-    backgroundColor: colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: space.lg,
-    gap: space.sm,
-  },
-  holdTitle: {
-    fontFamily: font.display,
-    fontSize: 18,
-    color: colors.ink,
-  },
-  holdBody: {
-    fontFamily: font.body,
-    fontSize: 14,
-    lineHeight: 21,
-    color: colors.muted,
-  },
-  preview: {
-    gap: space.sm,
-  },
-  factor: {
-    fontFamily: font.body,
-    fontSize: 13,
-    color: colors.muted,
-  },
-  compare: {
-    fontFamily: font.bodyMed,
-    fontSize: 14,
-    color: colors.accentText,
-  },
-  error: {
-    fontFamily: font.body,
-    fontSize: 14,
-    color: colors.danger,
-  },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    flex: { flex: 1 },
+    wrap: { padding: space.lg, paddingTop: space.xl, maxWidth: 620, width: "100%", alignSelf: "center", gap: space.md, paddingBottom: 48 },
+    methodBox: { gap: space.sm, padding: space.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
+    addressSearch: { gap: 4, position: "relative", zIndex: 10 },
+    searchStatus: { fontFamily: font.body, fontSize: 12, color: colors.muted, paddingHorizontal: 2 },
+    suggestions: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 8, overflow: "hidden" },
+    suggestion: { paddingHorizontal: space.md, paddingVertical: 11, backgroundColor: colors.surface },
+    suggestionBorder: { borderTopWidth: 1, borderTopColor: colors.line }, suggestionPressed: { backgroundColor: colors.surfaceMuted },
+    suggestionText: { fontFamily: font.body, fontSize: 14, lineHeight: 19, color: colors.ink },
+    modeLabel: { fontFamily: font.bodyMed, fontSize: 13, color: colors.muted, textTransform: "uppercase", letterSpacing: 0.6, marginTop: space.xs },
+    modes: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+    modeHint: { fontFamily: font.body, fontSize: 12, color: colors.muted, marginTop: -space.sm },
+    modeUnavailable: { fontFamily: font.bodyMed, fontSize: 12, color: colors.danger, marginTop: -space.sm },
+    manualWrap: { gap: space.md },
+    legEditor: { gap: space.sm, padding: space.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
+    legHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+    legHeading: { fontFamily: font.display, fontSize: 18, color: colors.ink }, removeLeg: { fontFamily: font.bodyMed, fontSize: 13, color: colors.danger },
+    hold: { backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.line, padding: space.lg, gap: space.sm },
+    holdTitle: { fontFamily: font.display, fontSize: 18, color: colors.ink }, holdBody: { fontFamily: font.body, fontSize: 14, lineHeight: 21, color: colors.muted },
+    preview: { gap: space.sm }, factor: { fontFamily: font.body, fontSize: 13, color: colors.muted },
+    compare: { fontFamily: font.bodyMed, fontSize: 14, color: colors.accentText }, error: { fontFamily: font.body, fontSize: 14, color: colors.danger },
+  });
+}
