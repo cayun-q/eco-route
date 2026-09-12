@@ -1,4 +1,5 @@
 import { lookupGazetteer, parseLatLng, type Place } from "@carbonroute/shared";
+import { airportPlace, lookupAirportByIata } from "./airportGraph";
 
 const cache = new Map<string, Place>();
 const searchCache = new Map<string, { expiresAt: number; places: Place[] }>();
@@ -64,8 +65,17 @@ export async function searchPlaces(query: string, limit = 6): Promise<Place[]> {
   const cachedSearch = searchCache.get(key);
   if (cachedSearch && cachedSearch.expiresAt > Date.now()) return cachedSearch.places;
 
+  const places: Place[] = [];
+
+  try {
+    const airport = await lookupAirportByIata(trimmed);
+    if (airport) places.push(airportPlace(airport));
+  } catch {
+    // Airport snapshot is optional for ordinary address searches.
+  }
+
   const local = lookupGazetteer(trimmed);
-  const places: Place[] = local && phraseMatches(trimmed, local.label) ? [local] : [];
+  if (local && phraseMatches(trimmed, local.label)) places.push(local);
 
   try {
     const url = new URL("https://nominatim.openstreetmap.org/search");
@@ -101,7 +111,7 @@ export async function searchPlaces(query: string, limit = 6): Promise<Place[]> {
       }
     }
   } catch {
-    // Search suggestions are optional; local gazetteer results still work.
+    // Search suggestions are optional; local results still work.
   }
 
   const result = places.slice(0, limit);
@@ -119,6 +129,18 @@ export async function geocode(query: string): Promise<Place> {
     const place = { ...coords, label: query.trim() };
     cache.set(key, place);
     return place;
+  }
+
+  try {
+    const airport = await lookupAirportByIata(query);
+    if (airport) {
+      const place = airportPlace(airport);
+      cache.set(key, place);
+      cache.set(normalizeWords(place.label), place);
+      return place;
+    }
+  } catch {
+    // Fall through to the normal geocoders.
   }
 
   const local = lookupGazetteer(query);
@@ -139,7 +161,7 @@ export async function geocode(query: string): Promise<Place> {
   }
 
   throw new GeocodeError(
-    `Could not place "${query.trim()}". Try a street address, city name, or lat,lng.`,
+    `Could not place "${query.trim()}". Try an airport code, street address, city name, or lat,lng.`,
     422,
   );
 }
