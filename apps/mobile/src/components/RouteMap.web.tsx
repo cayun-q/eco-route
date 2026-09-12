@@ -1,15 +1,18 @@
 import { useEffect, useId, useRef } from "react";
-import type { Place } from "@carbonroute/shared";
+import type { Place, TransportMode } from "@carbonroute/shared";
 import { colors } from "../theme";
 
 type Props = {
   origin: Place;
   destination: Place;
   polyline: [number, number][];
+  mode: TransportMode;
 };
 
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
 const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+const CAR_ROUTE = "#2563EB";
+const PLANE_ROUTE = "#D97706";
 
 function loadCss(href: string) {
   if (document.querySelector(`link[href="${href}"]`)) return;
@@ -45,7 +48,7 @@ type LeafletLike = {
   marker: (ll: [number, number], o: object) => { addTo: (m: unknown) => void };
 };
 
-export function RouteMap({ origin, destination, polyline }: Props) {
+export function RouteMap({ origin, destination, polyline, mode }: Props) {
   const rawId = useId().replace(/[^a-zA-Z0-9]/g, "");
   const id = `cr-map-${rawId}`;
   const mapRef = useRef<{ remove: () => void } | null>(null);
@@ -67,19 +70,22 @@ export function RouteMap({ origin, destination, polyline }: Props) {
         maxZoom: 18,
       }).addTo(map);
       const line = L.polyline(polyline, {
-        color: colors.ink,
-        weight: 4,
-        opacity: 0.92,
+        color: mode === "car" ? CAR_ROUTE : PLANE_ROUTE,
+        weight: mode === "car" ? 5 : 4,
+        opacity: 0.94,
+        smoothFactor: mode === "plane" ? 0.35 : 1,
+        lineCap: "round",
+        lineJoin: "round",
       }).addTo(map);
       const iconA = L.divIcon({
         className: "",
-        html: `<div style="width:14px;height:14px;background:${colors.accent};border:2px solid ${colors.white};box-shadow:2px 2px 0 ${colors.ink}29"></div>`,
+        html: `<div style="width:14px;height:14px;background:${colors.accent};border:2px solid ${colors.white};box-shadow:2px 2px 0 ${colors.ink}29;border-radius:50%"></div>`,
         iconSize: [14, 14],
         iconAnchor: [7, 7],
       });
       const iconB = L.divIcon({
         className: "",
-        html: `<div style="width:14px;height:14px;background:${colors.clay};border:2px solid ${colors.white};box-shadow:2px 2px 0 ${colors.ink}29"></div>`,
+        html: `<div style="width:14px;height:14px;background:${colors.clay};border:2px solid ${colors.white};box-shadow:2px 2px 0 ${colors.ink}29;border-radius:50%"></div>`,
         iconSize: [14, 14],
         iconAnchor: [7, 7],
       });
@@ -94,7 +100,7 @@ export function RouteMap({ origin, destination, polyline }: Props) {
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, [id, origin, destination, polyline]);
+  }, [id, origin, destination, polyline, mode]);
 
   return <div id={id} style={{ width: "100%", height: "100%", background: colors.white }} />;
 }
