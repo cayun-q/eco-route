@@ -1,38 +1,31 @@
-# Eco-Score Calculator
+# Eco-Route Recommendations
 
-Calculate an **Eco-Score (30–100)** from start/end locations, trip distance, and transport mode. No map UI.
+Compare multi-modal routes for an origin and destination, estimate CO₂e, filter impractical options, and show greener alternatives with time vs carbon tradeoffs.
 
-## How it works
+## Pipeline
 
-1. Enter a **start** and **end** place.
-2. Choose a transport mode.
-3. The app geocodes both places (OpenStreetMap Nominatim), measures great-circle distance, then scores the trip.
+1. **Carbon baselines** (`src/carbonBaselines.js`) — g CO₂e / km for car, EV, bus, bike, walk  
+2. **Routing** (`src/routing.js`) — OpenRouteService in parallel for car/EV/bike/walk; bus estimated from driving  
+3. **Filter & compare** (`src/compareRoutes.js`) — distance/duration thresholds + % CO₂ savings; Park & Ride for long drives  
+4. **UI cards** (`src/renderRecommendations.js`) — recommendation cards + gamified framing (`src/gamification.js`)
 
-### Formula
-
-```text
-modeFactor      = g_CO₂_per_km ÷ 171
-distanceFactor  = min(1, distance_km ÷ 20)
-severity        = modeFactor × (0.35 + 0.65 × distanceFactor)
-score           = round(30 + 70 × (1 − severity))   // clamped to 30–100
-```
-
-Petrol car no longer scores 0 — the floor is **30**. Longer, dirtier trips land nearer that floor; bike/walk stay near **100**.
-
-Carbon intensity baselines live in `src/carbonBaselines.js` (g CO₂e / km per mode). Scoring uses `calculateEcoScore(mode, distanceKm)` in `src/ecoScore.js`.
-
-| Mode | Intensity | ~20 km score |
-| --- | --- | --- |
-| Driving (Car) | 171 g CO₂e/km | 30 |
-| Electric Vehicle (EV) | 45 g CO₂e/km | ~82 |
-| Bicycle | 0 g CO₂e/km | 100 |
-| Walking | 0 g CO₂e/km | 100 |
-
-## Run
+## Setup
 
 ```bash
+cp .env.example .env
+# set VITE_ORS_API_KEY from https://openrouteservice.org/
 npm install
 npm run dev
 ```
 
-Open the URL Vite prints (port `43123` by default).
+Open the URL Vite prints (default port `43123`).
+
+## Thresholds
+
+| Mode | Max distance |
+| --- | --- |
+| Walking | 5 km |
+| Cycling | 25 km |
+| Transit (estimated) | 80 km |
+
+Active modes slower than **2.75×** your selected mode are hidden. **Park & Ride** appears for car/EV trips over ~25 km.

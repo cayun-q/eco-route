@@ -1,5 +1,11 @@
-import { GRAMS_CO2E_PER_KM } from "./carbonBaselines.js";
-import { calculateEcoScore, estimateTripCo2Grams } from "./ecoScore.js";
+import { geocode, fetchMultiModalRoutes } from "./routing.js";
+import {
+  compareAlternatives,
+  buildParkAndRideSuggestion,
+} from "./compareRoutes.js";
+import { renderRecommendationCards } from "./renderRecommendations.js";
+import { calculateEcoScore } from "./ecoScore.js";
+import { getGramsCo2ePerKm } from "./carbonBaselines.js";
 
 const form = document.getElementById("eco-form");
 const startInput = document.getElementById("start-location");
@@ -12,9 +18,9 @@ const meterEl = document.getElementById("eco-score-meter");
 const intensityEl = document.getElementById("intensity");
 const distanceEl = document.getElementById("distance");
 const tripCo2El = document.getElementById("trip-co2");
+const durationEl = document.getElementById("duration");
 const submitBtn = document.getElementById("calculate");
-
-const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
+const recsEl = document.getElementById("recommendations");
 
 function setStatus(message) {
   statusEl.textContent = message;
@@ -31,87 +37,44 @@ function setError(message) {
 }
 
 function formatDistance(km) {
-  if (km < 1) {
-    return `${Math.round(km * 1000)} m`;
-  }
+  if (km < 1) return `${Math.round(km * 1000)} m`;
   return `${km.toFixed(2)} km`;
 }
 
-function formatTripCo2(grams) {
-  if (grams <= 0) {
-    return "0 g";
-  }
-  if (grams < 1000) {
-    return `${Math.round(grams)} g`;
-  }
+function formatDuration(sec) {
+  const minutes = Math.round(sec / 60);
+  if (minutes < 60) return `${minutes} min`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${h} h ${m} min`;
+}
+
+function formatCo2(grams) {
+  if (grams <= 0) return "0 g";
+  if (grams < 1000) return `${Math.round(grams)} g`;
   return `${(grams / 1000).toFixed(2)} kg`;
 }
 
-function toRadians(degrees) {
-  return (degrees * Math.PI) / 180;
-}
-
-/** Great-circle distance in km (Haversine). */
-export function haversineKm(a, b) {
-  const earthRadiusKm = 6371;
-  const dLat = toRadians(b.lat - a.lat);
-  const dLon = toRadians(b.lon - a.lon);
-  const lat1 = toRadians(a.lat);
-  const lat2 = toRadians(b.lat);
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-  return 2 * earthRadiusKm * Math.asin(Math.min(1, Math.sqrt(h)));
-}
-
-async function geocode(query) {
-  const url = new URL(NOMINATIM_URL);
-  url.searchParams.set("q", query);
-  url.searchParams.set("format", "json");
-  url.searchParams.set("limit", "1");
-
-  const response = await fetch(url.toString(), {
-    headers: {
-      Accept: "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Location lookup failed (${response.status}).`);
-  }
-
-  const results = await response.json();
-  if (!Array.isArray(results) || results.length === 0) {
-    throw new Error(`Could not find “${query}”. Try a clearer place name.`);
-  }
-
-  return {
-    lat: Number(results[0].lat),
-    lon: Number(results[0].lon),
-    label: results[0].display_name,
-  };
-}
-
-function renderScore({ mode, distanceKm }) {
-  const score = calculateEcoScore(mode, distanceKm);
-  const intensity = GRAMS_CO2E_PER_KM[mode] ?? 0;
-  const tripCo2 = estimateTripCo2Grams(mode, distanceKm);
-
+function renderPrimarySummary(route) {
+  const score = calculateEcoScore(route.modeId, route.distanceKm);
   scoreEl.textContent = String(score);
   meterEl.style.width = `${score}%`;
   meterEl.parentElement?.setAttribute("aria-valuenow", String(score));
-  intensityEl.textContent = `${intensity} g/km`;
-  distanceEl.textContent = formatDistance(distanceKm);
-  tripCo2El.textContent = formatTripCo2(tripCo2);
+  intensityEl.textContent = `${getGramsCo2ePerKm(route.modeId)} g/km`;
+  distanceEl.textContent = formatDistance(route.distanceKm);
+  durationEl.textContent = formatDuration(route.durationSec);
+  tripCo2El.textContent = formatCo2(route.co2Grams);
 }
 
 async function onSubmit(event) {
   event.preventDefault();
   setError("");
+  recsEl.hidden = true;
+  recsEl.innerHTML = "";
 
   const startQuery = startInput.value.trim();
   const endQuery = endInput.value.trim();
-  const mode = modeSelect.value;
+  const primaryModeId = modeSelect.value;
 
   if (!startQuery || !endQuery) {
     setError("Enter both a start and end location.");
@@ -123,52 +86,38 @@ async function onSubmit(event) {
 
   try {
     const start = await geocode(startQuery);
-    // Nominatim asks for max 1 request/second.
-    await new Promise((resolve) => setTimeout(resolve, 1100));
+    await new Promise((r) => setTimeout(r, 1100));
     const end = await geocode(endQuery);
-    const distanceKm = haversineKm(start, end);
 
-    if (distanceKm <= 0) {
-      throw new Error("Start and end look like the same place.");
-    }
-
-    renderScore({ mode, distanceKm });
-    setStatus(
-      `${start.label.split(",")[0]} → ${end.label.split(",")[0]} · ${formatDistance(distanceKm)}`,
+    setStatus("Fetching multi-modal routes from OpenRouteService…");
+    const { primary, alternatives, errors, all } = await fetchMultiModalRoutes(
+      start,
+      end,
+      primaryModeId,
     );
+
+    renderPrimarySummary(primary);
+
+    const compared = compareAlternatives(primary, alternatives);
+    const transit = all.find((r) => r.modeId === "transit-bus");
+    const parkRide = buildParkAndRideSuggestion(primary, transit);
+
+    renderRecommendationCards(recsEl, compared, parkRide, primary);
+
+    const startName = start.label?.split(",")[0] ?? startQuery;
+    const endName = end.label?.split(",")[0] ?? endQuery;
+    let status = `${startName} → ${endName} · compared ${compared.filter((c) => c.realistic).length} realistic options`;
+    if (errors.length) {
+      status += ` (${errors.length} profile warning${errors.length > 1 ? "s" : ""})`;
+    }
+    setStatus(status);
   } catch (error) {
-    setStatus("Could not calculate Eco-Score.");
+    setStatus("Could not build recommendations.");
     setError(error.message || "Unknown error.");
   } finally {
     submitBtn.disabled = false;
   }
 }
 
-function onModeChange() {
-  // Recompute with last known distance text if we already have one in km form.
-  const distanceText = distanceEl.textContent;
-  const match = distanceText.match(/([\d.]+)\s*km/);
-  const metersMatch = distanceText.match(/([\d.]+)\s*m/);
-  let distanceKm = 0;
-  if (match) {
-    distanceKm = Number(match[1]);
-  } else if (metersMatch) {
-    distanceKm = Number(metersMatch[1]) / 1000;
-  }
-
-  if (distanceKm > 0) {
-    renderScore({ mode: modeSelect.value, distanceKm });
-  } else {
-    // Mode-only preview before locations are set (0 km → still uses floor).
-    renderScore({ mode: modeSelect.value, distanceKm: 0 });
-    distanceEl.textContent = "—";
-    tripCo2El.textContent = "—";
-  }
-}
-
 form.addEventListener("submit", onSubmit);
-modeSelect.addEventListener("change", onModeChange);
-renderScore({ mode: modeSelect.value, distanceKm: 0 });
-distanceEl.textContent = "—";
-tripCo2El.textContent = "—";
-setStatus("Enter start and end locations, then calculate.");
+setStatus("Enter origin, destination, and your usual mode — then compare greener options.");

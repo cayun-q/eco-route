@@ -3,93 +3,106 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Eco-Score Calculator</title>
+    <title>Eco-Route Recommendations</title>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <main class="card">
-      <h1>Eco-Score</h1>
-      <p class="lede">
-        Score out of 100 from your start/end locations, trip distance, and
-        transport mode. Petrol car trips bottom out around 30 — never 0.
-      </p>
+    <main class="app">
+      <header class="hero">
+        <h1>Eco-Route</h1>
+        <p class="lede">
+          Compare driving, EV, transit, cycling, and walking for the same trip.
+          See carbon savings, time tradeoffs, and practical alternatives — with
+          Eco-Scores that never bottom out at zero.
+        </p>
+      </header>
 
-      <form id="eco-form">
-        <label class="field" for="start-location">
-          Start location
-          <input
-            id="start-location"
-            name="start"
-            type="text"
-            placeholder="e.g. Trafalgar Square, London"
-            autocomplete="street-address"
-            required
-          />
-        </label>
+      <section class="card">
+        <form id="eco-form">
+          <label class="field" for="start-location">
+            Origin
+            <input
+              id="start-location"
+              name="start"
+              type="text"
+              placeholder="e.g. Trafalgar Square, London"
+              autocomplete="street-address"
+              required
+            />
+          </label>
 
-        <label class="field" for="end-location">
-          End location
-          <input
-            id="end-location"
-            name="end"
-            type="text"
-            placeholder="e.g. Tower Bridge, London"
-            autocomplete="street-address"
-            required
-          />
-        </label>
+          <label class="field" for="end-location">
+            Destination
+            <input
+              id="end-location"
+              name="end"
+              type="text"
+              placeholder="e.g. Tower Bridge, London"
+              autocomplete="street-address"
+              required
+            />
+          </label>
 
-        <label class="field" for="transport-mode">
-          Transport mode
-          <select id="transport-mode">
-            <option value="driving-car" selected>Driving (Car)</option>
-            <option value="driving-ev">Electric Vehicle (EV)</option>
-            <option value="cycling-regular">Bicycle</option>
-            <option value="foot-walking">Walking</option>
-          </select>
-        </label>
+          <label class="field" for="transport-mode">
+            Your usual mode
+            <select id="transport-mode">
+              <option value="driving-car" selected>Driving (Car)</option>
+              <option value="driving-ev">Electric Vehicle (EV)</option>
+              <option value="transit-bus">Transit (Bus)</option>
+              <option value="cycling-regular">Bicycle</option>
+              <option value="foot-walking">Walking</option>
+            </select>
+          </label>
 
-        <button type="submit" id="calculate">Calculate Eco-Score</button>
-      </form>
+          <button type="submit" id="calculate">Compare routes</button>
+        </form>
 
-      <p id="status" class="status">
-        Enter start and end locations, then calculate.
-      </p>
-      <p id="error" class="error" hidden></p>
+        <p id="status" class="status">
+          Enter origin, destination, and your usual mode — then compare greener
+          options.
+        </p>
+        <p id="error" class="error" hidden></p>
 
-      <section class="score" aria-label="Eco-Score result">
-        <div class="score__row">
-          <span class="score__label">Eco-Score</span>
-          <p class="score__value">
-            <span id="eco-score-value">30</span>
-            <span class="score__out-of">/ 100</span>
-          </p>
-        </div>
-        <div
-          class="score__track"
-          role="meter"
-          aria-valuemin="30"
-          aria-valuemax="100"
-          aria-valuenow="30"
-          aria-labelledby="eco-score-value"
-        >
-          <div id="eco-score-meter" class="score__meter"></div>
-        </div>
-        <dl class="score__stats">
-          <div>
-            <dt>Distance</dt>
-            <dd id="distance">—</dd>
+        <section class="score" aria-label="Selected mode Eco-Score">
+          <div class="score__row">
+            <span class="score__label">Selected Eco-Score</span>
+            <p class="score__value">
+              <span id="eco-score-value">—</span>
+              <span class="score__out-of">/ 100</span>
+            </p>
           </div>
-          <div>
-            <dt>Intensity</dt>
-            <dd id="intensity">—</dd>
+          <div
+            class="score__track"
+            role="meter"
+            aria-valuemin="30"
+            aria-valuemax="100"
+            aria-valuenow="30"
+            aria-labelledby="eco-score-value"
+          >
+            <div id="eco-score-meter" class="score__meter"></div>
           </div>
-          <div>
-            <dt>Trip CO₂</dt>
-            <dd id="trip-co2">—</dd>
-          </div>
-        </dl>
+          <dl class="score__stats">
+            <div>
+              <dt>Distance</dt>
+              <dd id="distance">—</dd>
+            </div>
+            <div>
+              <dt>Duration</dt>
+              <dd id="duration">—</dd>
+            </div>
+            <div>
+              <dt>Intensity</dt>
+              <dd id="intensity">—</dd>
+            </div>
+            <div>
+              <dt>Trip CO₂</dt>
+              <dd id="trip-co2">—</dd>
+            </div>
+          </dl>
+        </section>
       </section>
+
+      <section id="recommendations" class="recs" hidden></section>
     </main>
     <script type="module" src="/src/main.js"></script>
   </body>
