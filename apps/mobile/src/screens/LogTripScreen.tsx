@@ -23,6 +23,7 @@ import { vsDrivingCopy } from "../format";
 type Props = NativeStackScreenProps<RootStackParamList, "LogTrip">;
 
 const MODES: TransportMode[] = ["car", "plane"];
+type CarStatus = "idle" | "checking" | "available" | "unavailable";
 
 type AddressSearchProps = {
   label: string;
@@ -108,6 +109,10 @@ function AddressSearch({ label, value, onChange, placeholder }: AddressSearchPro
   );
 }
 
+function isNoRoadError(err: unknown): boolean {
+  return err instanceof Error && err.message.includes("No drivable route exists");
+}
+
 function isHardRoutingError(err: unknown): boolean {
   const message = err instanceof Error ? err.message : "";
   return (
@@ -122,6 +127,7 @@ export function LogTripScreen({ navigation }: Props) {
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
   const [mode, setMode] = useState<TransportMode>("car");
+  const [carStatus, setCarStatus] = useState<CarStatus>("idle");
   const [estimate, setEstimate] = useState<RouteEstimate | null>(null);
   const [estimating, setEstimating] = useState(false);
   const [estimateError, setEstimateError] = useState<string | null>(null);
@@ -132,11 +138,52 @@ export function LogTripScreen({ navigation }: Props) {
 
   useEffect(() => {
     if (!bothEnds) {
+      setCarStatus("idle");
+      return;
+    }
+
+    let cancelled = false;
+    setCarStatus("checking");
+    const handle = setTimeout(async () => {
+      try {
+        await api.estimate({
+          origin: origin.trim(),
+          destination: destination.trim(),
+          mode: "car",
+        });
+        if (!cancelled) setCarStatus("available");
+      } catch (err) {
+        if (cancelled) return;
+        if (isNoRoadError(err)) {
+          setCarStatus("unavailable");
+          setMode((current) => (current === "car" ? "plane" : current));
+          setEstimate((current) => (current?.mode === "car" ? null : current));
+        } else {
+          setCarStatus("idle");
+        }
+      }
+    }, 650);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [origin, destination, bothEnds]);
+
+  useEffect(() => {
+    if (!bothEnds) {
       setEstimate(null);
       setEstimateError(null);
       setEstimating(false);
       return;
     }
+    if (mode === "car" && carStatus === "unavailable") {
+      setEstimate(null);
+      setEstimateError("Car is unavailable because these locations are not connected by a drivable road route.");
+      setEstimating(false);
+      return;
+    }
+
     let cancelled = false;
     setEstimating(true);
     setEstimateError(null);
@@ -179,7 +226,7 @@ export function LogTripScreen({ navigation }: Props) {
       cancelled = true;
       clearTimeout(handle);
     };
-  }, [origin, destination, mode, bothEnds, factors]);
+  }, [origin, destination, mode, bothEnds, factors, carStatus]);
 
   const compare = useMemo(() => vsDrivingCopy(estimate?.vsDrivingKg), [estimate]);
 
@@ -239,10 +286,17 @@ export function LogTripScreen({ navigation }: Props) {
                 label={m[0].toUpperCase() + m.slice(1)}
                 selected={mode === m}
                 tone={m}
+                disabled={m === "car" && carStatus === "unavailable"}
                 onPress={() => setMode(m)}
               />
             ))}
           </View>
+          {carStatus === "checking" && bothEnds ? (
+            <Text style={styles.modeHint}>Checking whether a road route exists…</Text>
+          ) : null}
+          {carStatus === "unavailable" ? (
+            <Text style={styles.modeUnavailable}>Car unavailable · no continuous drivable route between these locations.</Text>
+          ) : null}
 
           {!bothEnds ? (
             <View style={styles.hold}>
@@ -348,6 +402,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: space.sm,
+  },
+  modeHint: {
+    fontFamily: font.body,
+    fontSize: 12,
+    color: colors.muted,
+    marginTop: -space.sm,
+  },
+  modeUnavailable: {
+    fontFamily: font.bodyMed,
+    fontSize: 12,
+    color: colors.danger,
+    marginTop: -space.sm,
   },
   hold: {
     backgroundColor: colors.surfaceMuted,
