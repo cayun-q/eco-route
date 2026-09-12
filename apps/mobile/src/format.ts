@@ -7,6 +7,11 @@ const KM_TO_MILES = 0.6213711922;
 const KG_TO_POUNDS = 2.2046226218;
 const GRAMS_PER_POUND = 453.59237;
 const KM_PER_MILE = 1.609344;
+let defaultMeasurementSystem: MeasurementSystem = "metric";
+
+export function setDefaultMeasurementSystem(system: MeasurementSystem): void {
+  defaultMeasurementSystem = system;
+}
 
 export function placeDisplayLabel(label: string): string {
   const parts = label
@@ -36,18 +41,18 @@ function formatMass(value: number, unit: "kg" | "lb"): string {
   return `${value.toFixed(2)} ${unit}`;
 }
 
-export function formatKg(kg: number, system: MeasurementSystem = "metric"): string {
+export function formatKg(kg: number, system: MeasurementSystem = defaultMeasurementSystem): string {
   return system === "imperial" ? formatMass(kg * KG_TO_POUNDS, "lb") : formatMass(kg, "kg");
 }
 
-export function formatKm(km: number, system: MeasurementSystem = "metric"): string {
+export function formatKm(km: number, system: MeasurementSystem = defaultMeasurementSystem): string {
   const value = system === "imperial" ? km * KM_TO_MILES : km;
   const unit = system === "imperial" ? "mi" : "km";
   if (value >= 100) return `${Math.round(value)} ${unit}`;
   return `${value.toFixed(1)} ${unit}`;
 }
 
-export function formatFactor(gPerKm: number, system: MeasurementSystem = "metric"): string {
+export function formatFactor(gPerKm: number, system: MeasurementSystem = defaultMeasurementSystem): string {
   if (system === "imperial") {
     const lbPerMile = (gPerKm * KM_PER_MILE) / GRAMS_PER_POUND;
     return `${lbPerMile.toFixed(3)} lb/mi`;
@@ -76,7 +81,7 @@ export function modeLabel(mode: TransportMode): string {
 
 export function vsDrivingCopy(
   vsDrivingKg: number | null | undefined,
-  system: MeasurementSystem = "metric",
+  system: MeasurementSystem = defaultMeasurementSystem,
 ): string | null {
   if (vsDrivingKg == null) return null;
   const abs = Math.abs(vsDrivingKg);
