@@ -30,22 +30,6 @@ function phraseMatches(query: string, candidate: string): boolean {
   return c === q || c.startsWith(`${q} `) || c.includes(` ${q} `) || c.endsWith(` ${q}`);
 }
 
-function candidateMatchesSearch(query: string, candidate: string): boolean {
-  const trimmed = query.trim();
-  if (/^\d+$/.test(trimmed)) {
-    // For a house-number-only query such as "5000", keep real street addresses
-    // like "5000 Forbes Ave, ..." but reject bare-number place names like
-    // "5000, Some Region, ...".
-    const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return new RegExp(`^${escaped}\\s+[^,\\s]`, "i").test(candidate.trim());
-  }
-  return phraseMatches(trimmed, candidate);
-}
-
-function shouldSearchAddress(query: string): boolean {
-  return query.trim().length >= 3;
-}
-
 async function nominatim(query: string): Promise<Place | null> {
   const url = new URL("https://nominatim.openstreetmap.org/search");
   url.searchParams.set("q", query);
@@ -75,7 +59,7 @@ async function nominatim(query: string): Promise<Place | null> {
 
 export async function searchPlaces(query: string, limit = 6): Promise<Place[]> {
   const trimmed = query.trim();
-  if (!shouldSearchAddress(trimmed)) return [];
+  if (trimmed.length < 3) return [];
 
   const key = normalizeWords(trimmed);
   const cachedSearch = searchCache.get(key);
@@ -91,14 +75,13 @@ export async function searchPlaces(query: string, limit = 6): Promise<Place[]> {
   }
 
   const local = lookupGazetteer(trimmed);
-  if (local && candidateMatchesSearch(trimmed, local.label)) places.push(local);
+  if (local && phraseMatches(trimmed, local.label)) places.push(local);
 
   try {
     const url = new URL("https://nominatim.openstreetmap.org/search");
     url.searchParams.set("q", trimmed);
     url.searchParams.set("format", "jsonv2");
-    const numericOnly = /^\d+$/.test(trimmed);
-    url.searchParams.set("limit", String(numericOnly ? 30 : Math.min(10, Math.max(limit * 2, 6))));
+    url.searchParams.set("limit", String(Math.min(10, Math.max(limit * 2, 6))));
     url.searchParams.set("addressdetails", "1");
     url.searchParams.set("dedupe", "1");
     const res = await fetch(url, {
@@ -114,7 +97,7 @@ export async function searchPlaces(query: string, limit = 6): Promise<Place[]> {
         display_name: string;
       }>;
       for (const hit of data) {
-        if (!candidateMatchesSearch(trimmed, hit.display_name)) continue;
+        if (!phraseMatches(trimmed, hit.display_name)) continue;
         const place: Place = {
           label: hit.display_name,
           lat: Number(hit.lat),
