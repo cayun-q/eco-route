@@ -15,13 +15,18 @@ CREATE TABLE IF NOT EXISTS trips (
   dest_lat DOUBLE PRECISION NOT NULL,
   dest_lng DOUBLE PRECISION NOT NULL,
   mode TEXT NOT NULL,
+  log_method TEXT NOT NULL DEFAULT 'automatic',
   distance_km NUMERIC(12, 3) NOT NULL,
   duration_min INTEGER NOT NULL,
   co2e_kg NUMERIC(12, 3) NOT NULL,
   polyline JSONB NOT NULL,
+  legs JSONB,
   factor_g_per_km NUMERIC(12, 4) NOT NULL,
   factor_source TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS log_method TEXT NOT NULL DEFAULT 'automatic';
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS legs JSONB;
 
 CREATE INDEX IF NOT EXISTS trips_created_at_idx ON trips (created_at DESC);
