@@ -12,6 +12,7 @@ const bodySchema = z.object({
   origin: z.string().trim().min(1).max(200),
   destination: z.string().trim().min(1).max(200),
   mode: z.enum(MODES),
+  direct: z.boolean().optional().default(false),
 });
 
 estimateRouter.post("/", async (req, res, next) => {
@@ -21,7 +22,7 @@ estimateRouter.post("/", async (req, res, next) => {
       res.status(400).json({ error: "origin, destination, and mode (car|plane) are required." });
       return;
     }
-    const { origin: originQ, destination: destQ, mode } = parsed.data;
+    const { origin: originQ, destination: destQ, mode, direct } = parsed.data;
     if (originQ.toLowerCase() === destQ.toLowerCase()) {
       res.status(400).json({ error: "Origin and destination need to be different places." });
       return;
@@ -29,7 +30,7 @@ estimateRouter.post("/", async (req, res, next) => {
 
     const [origin, destination] = await Promise.all([geocode(originQ), geocode(destQ)]);
 
-    if (mode === "plane") {
+    if (mode === "plane" && !direct) {
       const journey = await buildPlaneJourney(origin, destination);
       let co2eKg = 0;
       let planeFactor = null as Awaited<ReturnType<typeof emissionsFor>>["factor"] | null;
