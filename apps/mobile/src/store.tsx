@@ -56,6 +56,9 @@ const emptyStats = (): TripStats => ({
   byMode: {
     car: { count: 0, co2eKg: 0 },
     ev: { count: 0, co2eKg: 0 },
+    bus: { count: 0, co2eKg: 0 },
+    bike: { count: 0, co2eKg: 0 },
+    walk: { count: 0, co2eKg: 0 },
     plane: { count: 0, co2eKg: 0 },
   },
 });
@@ -112,9 +115,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           next = { ...DEFAULT_PREFERENCES, ...saved };
         } else {
           const legacy = await AsyncStorage.getItem(LEGACY_MEASUREMENT_KEY);
-          if (legacy === "metric" || legacy === "imperial") {
-            next = { ...DEFAULT_PREFERENCES, measurementSystem: legacy };
-          }
+          if (legacy === "metric" || legacy === "imperial") next = { ...DEFAULT_PREFERENCES, measurementSystem: legacy };
         }
       } catch {
         next = DEFAULT_PREFERENCES;
@@ -135,37 +136,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const setMeasurementSystem = useCallback(async (value: MeasurementSystem) => {
-    setDefaultMeasurementSystem(value);
-    await updatePreference("measurementSystem", value);
-  }, [updatePreference]);
+  const setMeasurementSystem = useCallback(async (value: MeasurementSystem) => { setDefaultMeasurementSystem(value); await updatePreference("measurementSystem", value); }, [updatePreference]);
+  const setDefaultLoggingMethod = useCallback(async (value: LogMethod) => { await updatePreference("defaultLoggingMethod", value); }, [updatePreference]);
+  const setThemePreference = useCallback(async (value: ThemePreference) => { await updatePreference("themePreference", value); }, [updatePreference]);
+  const setDisplayPrecision = useCallback(async (value: DisplayPrecision) => { setDefaultDisplayPrecision(value); await updatePreference("displayPrecision", value); }, [updatePreference]);
+  const setShowDrivingComparison = useCallback(async (value: boolean) => { setDefaultShowDrivingComparison(value); await updatePreference("showDrivingComparison", value); }, [updatePreference]);
+  const setRecentTrips = useCallback(async (value: RecentTripsPreference) => { await updatePreference("recentTrips", value); }, [updatePreference]);
 
-  const setDefaultLoggingMethod = useCallback(async (value: LogMethod) => {
-    await updatePreference("defaultLoggingMethod", value);
-  }, [updatePreference]);
-
-  const setThemePreference = useCallback(async (value: ThemePreference) => {
-    await updatePreference("themePreference", value);
-  }, [updatePreference]);
-
-  const setDisplayPrecision = useCallback(async (value: DisplayPrecision) => {
-    setDefaultDisplayPrecision(value);
-    await updatePreference("displayPrecision", value);
-  }, [updatePreference]);
-
-  const setShowDrivingComparison = useCallback(async (value: boolean) => {
-    setDefaultShowDrivingComparison(value);
-    await updatePreference("showDrivingComparison", value);
-  }, [updatePreference]);
-
-  const setRecentTrips = useCallback(async (value: RecentTripsPreference) => {
-    await updatePreference("recentTrips", value);
-  }, [updatePreference]);
-
-  const resolvedTheme: ResolvedTheme =
-    preferences.themePreference === "system"
-      ? systemScheme === "dark" ? "dark" : "light"
-      : preferences.themePreference;
+  const resolvedTheme: ResolvedTheme = preferences.themePreference === "system" ? systemScheme === "dark" ? "dark" : "light" : preferences.themePreference;
 
   const flushQueue = useCallback(async () => {
     const queued = await readQueue();
@@ -200,7 +178,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const cached = await readCachedFactors();
     if (cached.length) setFactors(cached);
     const queued = await readQueue();
-
     try {
       await flushQueue();
       const [factorRes, tripRes, statsRes] = await Promise.all([api.factors(), api.trips(), api.stats()]);
@@ -259,11 +236,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     recentTrips: preferences.recentTrips,
     setMeasurementSystem, setDefaultLoggingMethod, setThemePreference, setDisplayPrecision,
     setShowDrivingComparison, setRecentTrips, refresh, saveTrip, deleteTrip, clearTrips,
-  }), [
-    trips, stats, factors, online, loading, error, lastRefreshedAt, preferencesLoaded, preferences,
-    resolvedTheme, setMeasurementSystem, setDefaultLoggingMethod, setThemePreference, setDisplayPrecision,
-    setShowDrivingComparison, setRecentTrips, refresh, saveTrip, deleteTrip, clearTrips,
-  ]);
+  }), [trips, stats, factors, online, loading, error, lastRefreshedAt, preferencesLoaded, preferences, resolvedTheme, setMeasurementSystem, setDefaultLoggingMethod, setThemePreference, setDisplayPrecision, setShowDrivingComparison, setRecentTrips, refresh, saveTrip, deleteTrip, clearTrips]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
