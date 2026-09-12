@@ -3,10 +3,16 @@ import type { EmissionFactor, Place, RouteEstimate, TransportMode, Trip, TripInp
 const BASE = (process.env.EXPO_PUBLIC_API_URL ?? "http://127.0.0.1:43124").replace(/\/$/, "");
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const method = (init?.method ?? "GET").toUpperCase();
+  const requestPath = method === "GET"
+    ? `${path}${path.includes("?") ? "&" : "?"}_=${Date.now()}`
+    : path;
+  const res = await fetch(`${BASE}${requestPath}`, {
     ...init,
+    cache: "no-store",
     headers: {
       "Content-Type": "application/json",
+      "Cache-Control": "no-cache",
       ...(init?.headers ?? {}),
     },
   });
