@@ -18,22 +18,22 @@ export const lightColors = {
 } as const;
 
 export const darkColors = {
-  bg: "#0F172A",
-  surface: "#172033",
-  surfaceMuted: "#123A38",
-  ink: "#F8FAFC",
-  muted: "#94A3B8",
-  line: "#285E59",
-  accent: "#14B8A6",
-  accentSoft: "#163F3B",
-  accentText: "#99F6E4",
-  accentPressed: "#2DD4BF",
+  bg: "#17191C",
+  surface: "#202327",
+  surfaceMuted: "#292D31",
+  ink: "#F1F3F2",
+  muted: "#A8AEB0",
+  line: "#3A3F44",
+  accent: "#4F8F68",
+  accentSoft: "#26362D",
+  accentText: "#9FD0AF",
+  accentPressed: "#5C9D75",
   warn: "#D0A653",
   warnSoft: "#3A3426",
-  danger: "#F87171",
-  clay: "#FB923C",
+  danger: "#E07B7B",
+  clay: "#C98665",
   white: "#FFFFFF",
-  mode: { car: "#94A3B8", ev: "#2DD4BF", bus: "#22D3EE", bike: "#4ADE80", walk: "#86EFAC", plane: "#FB923C" },
+  mode: { car: "#A8AEB0", ev: "#5E9B73", bus: "#6FA58A", bike: "#78B88A", walk: "#91C99C", plane: "#C98665" },
 } as const;
 
 export type ThemeColors = typeof lightColors;
