@@ -1,83 +1,120 @@
 # CarbonRoute
 
-Passenger trip ledger. Log origin and destination, preview the route on a map, and store CO₂e from a **Postgres factor table** — not a hardcoded g/km.
+Multi-leg, multi-modal travel emissions planner. Expo mobile + Express + Postgres.
 
-This is an Expo + Express + Postgres monorepo. The mobile app stays Expo (not Vite). The map appears **only after both ends are set**.
+One trip is an ordered list of **legs**. Each leg has an origin, destination, and mode (`car` | `plane` | `train`). Total CO₂e is the **sum of legs**, using a DESNZ/DEFRA 2024 factor table in Postgres — never a hardcoded g/km.
 
-## How to run
+## Multi-leg example
 
-```bash
-cp .env.example .env
-docker compose up -d db
-npm install
-npm run seed          # writes DESNZ/DEFRA 2024 factors if the table is empty
-npm run api           # Express on http://127.0.0.1:43124
-npm run web           # Expo web on http://127.0.0.1:43123
-```
+Drive to the airport, fly, drive onward:
 
-Native: `npm run mobile`, then open in Expo Go. Point `EXPO_PUBLIC_API_URL` at your machine.
+1. Type **San Francisco** in origin (typeahead after 2 characters) → pick the city.
+2. Destination **SFO** · mode **car**.
+3. **Add leg** — origin autofills to SFO. Change mode to **plane**, destination **JFK**.
+4. **Add leg** — origin autofills to JFK. Mode **car**, destination **Brooklyn**.
+5. Or tap **Flight with drives** to scaffold the empty car → plane → car cards first.
 
-Without Docker, create a Postgres database and set `DATABASE_URL`. The API runs `init.sql` + `seed.sql` on boot.
+The map appears once any leg has both ends. Each segment is stroked in its mode color (car `#6E7340`, plane `#A65D3F`, train `#3D5560`). Plane legs are a great-circle arc, not a straight chord. A sticky **Total CO₂e** sits under the map; the breakdown lists `A → B`, a mode chip, and that leg’s kg.
 
-### Optional routing keys
+Single-leg still works: leave the default one empty card, pick train, London St Pancras → Paris Gare du Nord.
 
-Leave these blank for mock geocode + haversine / great-circle polylines.
+## Autofill / geocode
 
-| Env | Provider |
-| --- | --- |
-| `MAPBOX_ACCESS_TOKEN` | Mapbox Directions |
-| `GOOGLE_MAPS_API_KEY` | Google Directions |
-| `ORS_API_KEY` | OpenRouteService |
+Baseline, no Places key:
 
-Plane trips always use a great-circle path. Road providers apply to car and train.
+`latlng` pair → local gazetteer → **Nominatim** `limit=1`
 
-## Product flow
-
-1. **Home** — ledger totals and recent trips. Empty until you log one.
-2. **Log trip** — type origin and destination, pick car / plane / train.
-3. After **both** fields have values, `POST /api/routes/estimate` returns a polyline. The map then shows markers, the line, and distance / duration / CO₂e chips.
-4. **Save** → `POST /api/trips` → **Results**. Home refreshes on focus.
-5. Offline: last factor table is cached; failed saves go into a trip queue and flush when the API is reachable. Offline estimates use the same gazetteer + calculator.
-
-## Structure
+Typeahead on every origin/destination (2+ characters):
 
 ```
-apps/api            Express + Postgres
-  db/init.sql       schema
-  db/seed.sql       emission_factors (DESNZ/DEFRA 2024)
-  src/routes        /api/health, /factors, /routes/estimate, /trips, /stats
-  src/services      geocode, routing, emissions calculator
-apps/mobile         Expo (iOS / Android / web)
-  src/theme.ts      eco-rough tokens
-  src/ui.tsx        Card, Button, Chip, EmptyState, Field
-  src/screens       Home, LogTrip, Results, TripDetail
-  src/components    TripCard, RouteMap, MapPreview
-  src/offline.ts    factor cache + trip queue
-packages/shared     types, kgFromDistance, haversine, gazetteer
+GET  /api/geocode/suggest?q=1+Market+St
+POST /api/geocode/suggest   { "q": "1 Market St" }
 ```
+
+Nominatim `limit≥5` (streets + cities), merged with the gazetteer. Selecting a hit stores **label + lat/lng** (and optional **iata** on airports) and shows the human label. If `MAPBOX_TOKEN` / `MAPBOX_ACCESS_TOKEN` or `GOOGLE_MAPS_API_KEY` is set, those providers are preferred; otherwise Nominatim.
+
+**Plane legs** use an airport picker seam (`GET /api/airports/suggest`) shaped as `{ label, lat, lng, iata? }` so an OpenFlights IATA snapshot can drop in later. Geometry stays a great-circle arc. Car/train stay on Nominatim. A later connect-check will **hard-block** suggest/estimate for plane OD pairs missing from that snapshot — not enforced this pass.
+
+Car/train geometry uses OSRM when it answers; otherwise a mock road. Planes stay great-circle.
 
 ## API
 
-| Method | Path | Notes |
+| Method | Path | Body |
 | --- | --- | --- |
-| GET | `/api/health` | DB ping |
-| GET | `/api/factors` | Factor table for the offline cache |
-| POST | `/api/routes/estimate` | `{ origin, destination, mode }` → places, polyline, distance, duration, `co2eKg`, factor used, `provider` |
-| GET | `/api/trips` | Recent trips |
-| POST | `/api/trips` | Persist a logged trip |
-| GET | `/api/trips/:id` | One trip |
-| GET | `/api/stats` | Totals for Home |
+| `GET`/`POST` | `/api/geocode/suggest?q=` | typeahead (`mode=plane` → airport seam) |
+| `GET`/`POST` | `/api/airports/suggest?q=` | IATA picker stub (gazetteer today) |
+| `GET` | `/api/geocode?q=` | single geocode (latlng → gazetteer → Nominatim 1) |
+| `POST` | `/estimate` | `{ legs: LegInput[] }` **or** `{ mode, origin, destination }` |
+| `POST` | `/trips` | same, plus optional `title` — persists trip **and** legs |
+| `GET` | `/trips`, `/trips/:id` | saved itineraries with nested legs |
+| `GET` | `/factors` | DESNZ/DEFRA seed rows |
+| `GET` | `/places?q=` | gazetteer only |
+| `GET` | `/health` | API + Postgres check |
 
-Emissions: `co2eKg = distanceKm * factor.gPerKm / 1000`. The grams-per-km value is loaded from `emission_factors`.
+A place is `{ placeId }` or `{ label, lat, lng }`. Adding a leg copies the previous destination into the new origin (editable).
 
-## Eco-rough UI
+## Mobile (eco-rough)
 
-Paper field-notebook: `#F2EEE4` ground, moss accent `#4A6741`, clay `#A65D3F` for high-emission chips. Cards are radius 8 with a 1px line and a hard 2px offset — no blur. Primary buttons are flat moss and darken on press. Chips are chunky; selected state is accent. Empty states are title + body only. Map chrome is paper / moss; map tiles stay white. Screens use theme tokens only.
+- Vertical paper cards (radius 8, 1px line, hard shadow), mode chips + origin + destination.
+- Muted connector between cards. **Add leg** is a ghost button. Remove on leg 2+.
+- Default = one empty leg. Optional **Flight with drives** preset.
+- Map only when ≥1 complete leg. Sticky total CO₂ near the map.
+- Home / results / trip detail: `A → B`, mode chip, CO₂; total prominent, not glossy.
+- Offline queue keeps the full multi-leg payload if save fails.
 
-## Tests
+## Run locally
+
+Needs Node 20+ and Postgres 16.
 
 ```bash
-npm test
+# Postgres (Docker)
+docker compose up -d postgres
+
+# or: createdb carbonroute
+# export DATABASE_URL=postgres://USER@127.0.0.1:5432/carbonroute
+
+cp .env.example .env
+npm install
+npm test              # leg summing + geocode/gazetteer + factor-table estimates
+npm run api           # Express on :47832 (migrates + seeds factors)
+npm run mobile:web    # Expo web on :47831
 ```
 
-Shared tests cover the calculator and polyline helpers. They fail if someone hardcodes g/km into `kgFromDistance`.
+Default URL: `postgres://carbonroute:carbonroute@127.0.0.1:5432/carbonroute`.
+
+One-origin preview (UI + API):
+
+```bash
+EXPO_WEB_PROXY=http://127.0.0.1:47831 API_PORT=47832 npm run api
+```
+
+Then visit `http://127.0.0.1:47832`.
+
+## Theme
+
+| Token | Value |
+| --- | --- |
+| paper | `#F2EEE4` |
+| moss | `#4A6741` |
+| car / plane / train | `#6E7340` / `#A65D3F` / `#3D5560` |
+| cards | radius 8, 1px line, 4px hard shadow |
+
+## Factors
+
+Seeded from **DESNZ/DEFRA GHG Conversion Factors 2024**. The estimate path **reads `emission_factors`**.
+
+| mode | band | kg CO₂e / km |
+| --- | --- | --- |
+| car | average | 0.16475 |
+| train | national_rail | 0.03546 |
+| plane | domestic / short_haul / long_haul | 0.27258 / 0.18592 / 0.14787 |
+
+Flight band: &lt; 800 km domestic, &lt; 3700 km short-haul, else long-haul.
+
+## Repo
+
+```
+apps/api        Express + Postgres
+apps/mobile     Expo (iOS / Android / web)
+packages/shared types, theme, place catalog, totalling
+```
