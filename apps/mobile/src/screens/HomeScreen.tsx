@@ -1,14 +1,17 @@
 import { useCallback } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation";
 import { useStore } from "../store";
-import { colors, space, type as font } from "../theme";
+import { colors, radius, space, type as font } from "../theme";
 import { Button, EmptyState, Heading, Muted, Screen } from "../ui";
 import { TripCard } from "../components/TripCard";
+import { LumaMenuButton } from "../components/LumaMenu";
 import { formatKg } from "../format";
+
+const logo = require("../../../../1.png");
 
 type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 
@@ -35,10 +38,17 @@ export function HomeScreen({ navigation }: Props) {
         contentContainerStyle={[styles.wrap, { paddingTop: Math.max(insets.top, 24) }]}
         keyboardShouldPersistTaps="handled"
       >
+        <View style={styles.topbar}>
+          <LumaMenuButton />
+          <Text style={styles.topbarWord}>Luma</Text>
+        </View>
+
         <View style={styles.masthead}>
-          <Text style={styles.mark}>CR</Text>
+          <View style={styles.logoShell}>
+            <Image source={logo} style={styles.logo} resizeMode="cover" />
+          </View>
           <View style={styles.mastText}>
-            <Heading>CarbonRoute</Heading>
+            <Heading>Luma</Heading>
             <Muted>Trip ledger · passenger CO₂e</Muted>
           </View>
         </View>
@@ -69,14 +79,14 @@ export function HomeScreen({ navigation }: Props) {
         {loading && trips.length === 0 ? (
           <View style={styles.loading}>
             <ActivityIndicator color={colors.accent} />
-            <Muted>Loading the ledger…</Muted>
+            <Muted>Loading your trips…</Muted>
           </View>
         ) : null}
 
         {!loading && trips.length === 0 ? (
           <EmptyState
             title="No trips on the ledger"
-            body="Log a drive or flight. CarbonRoute estimates CO₂e from the Postgres factor table — not a hardcoded g/km."
+            body="Log a drive or flight. Luma estimates passenger CO₂e using routing data and the configured emissions factors."
           />
         ) : null}
 
@@ -114,23 +124,34 @@ const styles = StyleSheet.create({
     gap: space.lg,
     paddingBottom: 48,
   },
+  topbar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  topbarWord: {
+    fontFamily: font.bodyMed,
+    fontSize: 15,
+    color: colors.ink,
+    letterSpacing: 0.2,
+  },
   masthead: {
     flexDirection: "row",
     alignItems: "center",
     gap: space.md,
   },
-  mark: {
-    width: 44,
-    height: 44,
-    backgroundColor: colors.accent,
-    color: colors.white,
-    textAlign: "center",
-    textAlignVertical: "center",
-    fontFamily: font.display,
-    fontSize: 16,
-    lineHeight: 44,
+  logoShell: {
+    width: 66,
+    height: 66,
+    borderRadius: radius.card,
+    overflow: "hidden",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.accent,
+    borderColor: colors.line,
+  },
+  logo: {
+    width: "100%",
+    height: "100%",
   },
   mastText: {
     flex: 1,
