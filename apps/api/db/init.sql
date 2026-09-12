@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS emission_factors (
 
 CREATE TABLE IF NOT EXISTS trips (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id TEXT,
   origin_label TEXT NOT NULL,
   destination_label TEXT NOT NULL,
   origin_lat DOUBLE PRECISION NOT NULL,
@@ -28,5 +29,7 @@ CREATE TABLE IF NOT EXISTS trips (
 
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS log_method TEXT NOT NULL DEFAULT 'automatic';
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS legs JSONB;
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS client_id TEXT;
 
 CREATE INDEX IF NOT EXISTS trips_created_at_idx ON trips (created_at DESC);
+CREATE INDEX IF NOT EXISTS trips_client_created_at_idx ON trips (client_id, created_at DESC);
