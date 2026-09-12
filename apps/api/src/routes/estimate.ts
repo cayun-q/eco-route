@@ -22,15 +22,28 @@ function leadingIata(value: string): string | null {
 }
 
 async function resolveDirectFlightPlace(value: string): Promise<Place> {
-  // Manual flight inputs may contain the full autocomplete display label.
-  // Always try the first three letters as an IATA code first, e.g.
-  // "AUS — Austin-Bergstrom International Airport, Austin" -> AUS.
   const code = leadingIata(value);
   if (code) {
     const airport = await lookupAirportByIata(code);
     if (airport) return airportPlace(airport);
   }
   return geocode(value);
+}
+
+async function planeJourneyEmissions(origin: Place, destination: Place) {
+  const journey = await buildPlaneJourney(origin, destination);
+  let co2eKg = 0;
+  let planeFactor = null as Awaited<ReturnType<typeof emissionsFor>>["factor"] | null;
+  for (const leg of journey.legs) {
+    const emissions = await emissionsFor(leg.mode, leg.distanceKm);
+    co2eKg += emissions.co2eKg;
+    if (leg.mode === "plane" && !planeFactor) planeFactor = emissions.factor;
+  }
+  return {
+    journey,
+    co2eKg: Math.round(co2eKg * 1000) / 1000,
+    planeFactor,
+  };
 }
 
 estimateRouter.post("/", async (req, res, next) => {
@@ -50,21 +63,9 @@ estimateRouter.post("/", async (req, res, next) => {
     const [origin, destination] = await Promise.all([resolvePlace(originQ), resolvePlace(destQ)]);
 
     if (mode === "plane" && !direct) {
-      const journey = await buildPlaneJourney(origin, destination);
-      let co2eKg = 0;
-      let planeFactor = null as Awaited<ReturnType<typeof emissionsFor>>["factor"] | null;
-      for (const leg of journey.legs) {
-        const emissions = await emissionsFor(leg.mode, leg.distanceKm);
-        co2eKg += emissions.co2eKg;
-        if (leg.mode === "plane" && !planeFactor) planeFactor = emissions.factor;
-      }
-      const roundedCo2eKg = Math.round(co2eKg * 1000) / 1000;
+      const { journey, co2eKg: roundedCo2eKg, planeFactor } = await planeJourneyEmissions(origin, destination);
       const fallbackFactor = (await emissionsFor("plane", 0)).factor;
 
-      // Compare the full multimodal itinerary against replacing the entire
-      // journey with one car-only route between the user's actual endpoints.
-      // Some trips (for example, across an ocean) have no drivable route, so
-      // the comparison remains unavailable in that case.
       let drivingCo2eKg: number | null = null;
       let vsDrivingKg: number | null = null;
       try {
@@ -89,6 +90,9 @@ estimateRouter.post("/", async (req, res, next) => {
         factor: planeFactor ?? fallbackFactor,
         drivingCo2eKg,
         vsDrivingKg,
+        comparisonMode: drivingCo2eKg == null ? null : "car",
+        comparisonCo2eKg: drivingCo2eKg,
+        vsComparisonKg: vsDrivingKg,
         provider: "openflights",
       });
       return;
@@ -96,6 +100,23 @@ estimateRouter.post("/", async (req, res, next) => {
 
     const routed = await routeBetween(origin, destination, mode);
     const emissions = await emissionsFor(mode, routed.distanceKm);
+
+    let comparisonMode: "car" | "plane" | null = null;
+    let comparisonCo2eKg: number | null = null;
+    let vsComparisonKg: number | null = null;
+
+    if (mode === "car") {
+      try {
+        const plane = await planeJourneyEmissions(origin, destination);
+        comparisonMode = "plane";
+        comparisonCo2eKg = plane.co2eKg;
+        vsComparisonKg = Math.round((emissions.co2eKg - comparisonCo2eKg) * 1000) / 1000;
+      } catch {
+        comparisonMode = null;
+        comparisonCo2eKg = null;
+        vsComparisonKg = null;
+      }
+    }
 
     res.json({
       origin,
@@ -108,6 +129,9 @@ estimateRouter.post("/", async (req, res, next) => {
       factor: emissions.factor,
       drivingCo2eKg: emissions.drivingCo2eKg,
       vsDrivingKg: emissions.vsDrivingKg,
+      comparisonMode,
+      comparisonCo2eKg,
+      vsComparisonKg,
       provider: routed.provider,
     });
   } catch (err) {
