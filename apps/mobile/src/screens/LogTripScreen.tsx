@@ -24,6 +24,12 @@ import { getOriginFromGps } from "../lib/location";
 import { hasBothEnds, localRouteGeometry } from "../lib/previewGeometry";
 import { colors } from "../theme";
 
+function readInputValue(event: { nativeEvent?: { text?: string }; target?: { value?: string } }): string | null {
+  if (typeof event.nativeEvent?.text === "string") return event.nativeEvent.text;
+  if (typeof event.target?.value === "string") return event.target.value;
+  return null;
+}
+
 const SAMPLES = [
   { origin: "London", destination: "Paris", mode: "plane" as const, subtype: "short_haul" as const },
   { origin: "Manchester", destination: "London", mode: "train" as const, subtype: "electric" as const },
@@ -163,7 +169,13 @@ export function LogTripScreen() {
               setOrigin(value);
               setOriginCoords(null);
             }}
-            placeholder="London"
+            onChange={(event) => {
+              const next = readInputValue(event);
+              if (next == null) return;
+              setOrigin(next);
+              setOriginCoords(null);
+            }}
+            placeholder="Choose origin"
             placeholderTextColor={colors.muted}
             style={styles.input}
             autoCorrect={false}
@@ -178,7 +190,11 @@ export function LogTripScreen() {
           <TextInput
             value={destination}
             onChangeText={setDestination}
-            placeholder="Paris"
+            onChange={(event) => {
+              const next = readInputValue(event);
+              if (next != null) setDestination(next);
+            }}
+            placeholder="Choose destination"
             placeholderTextColor={colors.muted}
             style={styles.input}
             autoCorrect={false}
