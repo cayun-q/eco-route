@@ -63,7 +63,7 @@ export function HomeScreen({ navigation }: Props) {
           <View style={styles.stat}><Text style={styles.statValue}>{stats.tripCount}</Text><Text style={styles.statLabel}>{stats.tripCount === 1 ? "trip" : "trips"}</Text></View>
         </View>
 
-        <Button label="Log a trip" onPress={() => navigation.navigate("LogTrip")} />
+        <Button label="Compare or log a trip" onPress={() => navigation.navigate("LogTrip")} />
         {!online ? <Text style={styles.banner}>Working from the on-device cache. Queued trips sync when the API is back.</Text> : null}
         {error && online ? <Text style={styles.banner}>{error}</Text> : null}
 
@@ -86,7 +86,7 @@ export function HomeScreen({ navigation }: Props) {
         ) : null}
 
         {loading && trips.length === 0 ? <View style={styles.loading}><ActivityIndicator color={colors.accent} /><Muted>Loading your trips…</Muted></View> : null}
-        {!loading && trips.length === 0 ? <EmptyState title="No trips on the ledger" body="Log a drive or flight. Luma estimates passenger CO₂e using routing data and the configured emissions factors." /> : null}
+        {!loading && trips.length === 0 ? <EmptyState title="No trips on the ledger" body="Compare car, EV, transit, bicycle, walking, and plane options, then save the trip you actually took." /> : null}
 
         <View style={styles.list}>
           {visibleTrips.map((trip) => <TripCard key={trip.id} trip={trip} onPress={() => navigation.navigate("TripDetail", { trip })} onDelete={() => deleteTrip(trip)} />)}
