@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { Trip } from "@carbonroute/shared";
 import { colors, radius, shadow, space, type as font } from "../theme";
 import { formatDate, formatKg, formatKm, modeLabel, placeDisplayLabel } from "../format";
+import { useStore } from "../store";
 import { Chip } from "../ui";
 
 export function TripCard({
@@ -14,6 +15,7 @@ export function TripCard({
   onPress: () => void;
   onDelete: () => Promise<void> | void;
 }) {
+  const { measurementSystem } = useStore();
   const high = trip.mode === "plane" || trip.co2eKg >= 20;
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -42,7 +44,7 @@ export function TripCard({
           <Chip label={modeLabel(trip.mode)} selected tone={trip.mode} />
         </View>
         <Text style={styles.meta}>
-          {formatKm(trip.distanceKm)} · {formatKg(trip.co2eKg)} CO₂e
+          {formatKm(trip.distanceKm, measurementSystem)} · {formatKg(trip.co2eKg, measurementSystem)} CO₂e
           {trip.pending ? " · queued" : ""}
         </Text>
         <Text style={styles.date}>{formatDate(trip.createdAt)}</Text>
