@@ -20,6 +20,7 @@ export function MapPreview({ estimate }: { estimate: RouteEstimate }) {
           origin={estimate.origin}
           destination={estimate.destination}
           polyline={estimate.polyline}
+          mode={estimate.mode}
         />
       </View>
       <View style={styles.chips}>
