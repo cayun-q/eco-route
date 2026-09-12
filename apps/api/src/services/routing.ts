@@ -13,12 +13,11 @@ export type Routed = {
   provider: RouteProvider;
 };
 
-async function mapboxRoute(origin: LatLng, dest: LatLng, mode: TransportMode): Promise<Routed> {
+async function mapboxRoute(origin: LatLng, dest: LatLng): Promise<Routed> {
   const token = process.env.MAPBOX_ACCESS_TOKEN;
   if (!token) throw new Error("MAPBOX_ACCESS_TOKEN missing");
-  const profile = mode === "train" ? "driving" : "driving";
   const url =
-    `https://api.mapbox.com/directions/v5/mapbox/${profile}/` +
+    `https://api.mapbox.com/directions/v5/mapbox/driving/` +
     `${origin.lng},${origin.lat};${dest.lng},${dest.lat}` +
     `?geometries=geojson&overview=full&access_token=${encodeURIComponent(token)}`;
   const res = await fetch(url);
@@ -40,14 +39,13 @@ async function mapboxRoute(origin: LatLng, dest: LatLng, mode: TransportMode): P
   };
 }
 
-async function googleRoute(origin: LatLng, dest: LatLng, mode: TransportMode): Promise<Routed> {
+async function googleRoute(origin: LatLng, dest: LatLng): Promise<Routed> {
   const key = process.env.GOOGLE_MAPS_API_KEY;
   if (!key) throw new Error("GOOGLE_MAPS_API_KEY missing");
-  const travelMode = mode === "train" ? "transit" : "driving";
   const url = new URL("https://maps.googleapis.com/maps/api/directions/json");
   url.searchParams.set("origin", `${origin.lat},${origin.lng}`);
   url.searchParams.set("destination", `${dest.lat},${dest.lng}`);
-  url.searchParams.set("mode", travelMode);
+  url.searchParams.set("mode", "driving");
   url.searchParams.set("key", key);
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Google ${res.status}`);
@@ -107,20 +105,50 @@ async function orsRoute(origin: LatLng, dest: LatLng): Promise<Routed> {
   };
 }
 
+async function osrmRoute(origin: LatLng, dest: LatLng): Promise<Routed> {
+  const coords = `${origin.lng},${origin.lat};${dest.lng},${dest.lat}`;
+  const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent": "CarbonRoute/1.0",
+    },
+  });
+  if (!res.ok) throw new Error(`OSRM ${res.status}`);
+  const body = (await res.json()) as {
+    code?: string;
+    routes?: Array<{
+      distance?: number;
+      duration?: number;
+      geometry?: { coordinates?: [number, number][] };
+    }>;
+  };
+  const route = body.routes?.[0];
+  const coordsOut = route?.geometry?.coordinates;
+  if (body.code !== "Ok" || !coordsOut?.length) throw new Error(`OSRM ${body.code ?? "empty route"}`);
+  const distanceM = route.distance ?? 0;
+  const durationS = route.duration ?? 0;
+  return {
+    distanceKm: Math.round((distanceM / 1000) * 1000) / 1000,
+    durationMin: Math.max(1, Math.round(durationS / 60)),
+    polyline: coordsOut.map(([lng, lat]) => [lat, lng]),
+    provider: "osrm",
+  };
+}
+
 export async function routeBetween(
   origin: LatLng,
   dest: LatLng,
   mode: TransportMode,
 ): Promise<Routed> {
-  // Air routes are great-circle even when road APIs are configured.
   if (mode === "plane") {
     return { ...mockRoute(origin, dest, mode), provider: "haversine" };
   }
 
   const attempts: Array<() => Promise<Routed>> = [];
-  if (process.env.MAPBOX_ACCESS_TOKEN) attempts.push(() => mapboxRoute(origin, dest, mode));
-  if (process.env.GOOGLE_MAPS_API_KEY) attempts.push(() => googleRoute(origin, dest, mode));
+  if (process.env.MAPBOX_ACCESS_TOKEN) attempts.push(() => mapboxRoute(origin, dest));
+  if (process.env.GOOGLE_MAPS_API_KEY) attempts.push(() => googleRoute(origin, dest));
   if (process.env.ORS_API_KEY) attempts.push(() => orsRoute(origin, dest));
+  attempts.push(() => osrmRoute(origin, dest));
 
   for (const attempt of attempts) {
     try {
