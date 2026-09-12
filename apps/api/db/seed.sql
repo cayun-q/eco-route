@@ -1,26 +1,17 @@
--- Passenger CO₂e factors from UK DESNZ / DEFRA GHG Conversion Factors 2024.
--- EV factor uses the EPA eGRID / MY2025 assumptions already used by distance_ecotourism.py.
--- The API calculator reads these rows. It does not hardcode g/km.
+-- Carbon baselines ported from score-ui for surface modes.
+-- Plane keeps Luma's existing DESNZ/DEFRA factor.
 DELETE FROM emission_factors WHERE mode = 'train';
 
 INSERT INTO emission_factors (mode, g_per_km, source, notes)
 VALUES
-  (
-    'car',
-    164.5400,
-    'DESNZ/DEFRA 2024',
-    'Average car, unknown fuel, passenger. kg CO2e/km converted to g/km.'
-  ),
-  (
-    'ev',
-    84.3325,
-    'EPA eGRID 2023 + EPA MY2025',
-    'Battery EV using U.S. average grid CO2 (0.767209 lb/kWh) and EPA Model Year 2025 median EV energy use (39 kWh/100 mi).'
-  ),
-  (
-    'plane',
-    245.8700,
-    'DESNZ/DEFRA 2024',
-    'Short-haul flight to/from UK, average passenger, with radiative forcing.'
-  )
-ON CONFLICT (mode) DO NOTHING;
+  ('car', 171.0000, 'score-ui baseline', 'Average petrol passenger car baseline used by score-ui.'),
+  ('ev', 45.0000, 'score-ui baseline', 'Battery EV on a typical grid mix; same road route as car.'),
+  ('bus', 89.0000, 'score-ui baseline', 'Average local bus per passenger-kilometre.'),
+  ('bike', 0.0000, 'score-ui baseline', 'No direct exhaust emissions; excludes food and lifecycle emissions.'),
+  ('walk', 0.0000, 'score-ui baseline', 'No direct exhaust emissions; excludes food and lifecycle emissions.'),
+  ('plane', 245.8700, 'DESNZ/DEFRA 2024', 'Short-haul flight to/from UK, average passenger, with radiative forcing.')
+ON CONFLICT (mode) DO UPDATE SET
+  g_per_km = EXCLUDED.g_per_km,
+  source = EXCLUDED.source,
+  notes = EXCLUDED.notes,
+  updated_at = NOW();
