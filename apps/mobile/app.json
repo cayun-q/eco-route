@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "backgroundColor": "#F2EEE4"
+      "backgroundColor": "#F4F7F1"
     },
     "ios": {
       "supportsTablet": true,
@@ -15,7 +15,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#F2EEE4",
+        "backgroundColor": "#F4F7F1",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
