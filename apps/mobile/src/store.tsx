@@ -13,6 +13,7 @@ import type { EmissionFactor, LogMethod, Trip, TripInput, TripStats } from "@car
 import {
   setDefaultDisplayPrecision,
   setDefaultMeasurementSystem,
+  setDefaultShowDrivingComparison,
   type DisplayPrecision,
   type MeasurementSystem,
 } from "./format";
@@ -119,6 +120,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       setDefaultMeasurementSystem(next.measurementSystem);
       setDefaultDisplayPrecision(next.displayPrecision);
+      setDefaultShowDrivingComparison(next.showDrivingComparison);
       setPreferences(next);
       setPreferencesLoaded(true);
     })();
@@ -151,6 +153,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [updatePreference]);
 
   const setShowDrivingComparison = useCallback(async (value: boolean) => {
+    setDefaultShowDrivingComparison(value);
     await updatePreference("showDrivingComparison", value);
   }, [updatePreference]);
 
@@ -211,47 +214,32 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       setOnline(false);
       setTrips(queued);
-      setStats({
-        ...emptyStats(),
-        tripCount: queued.length,
-        totalCo2eKg: queued.reduce((n, t) => n + t.co2eKg, 0),
-      });
+      setStats({ ...emptyStats(), tripCount: queued.length, totalCo2eKg: queued.reduce((n, t) => n + t.co2eKg, 0) });
       setError(err instanceof Error ? err.message : "Could not reach the API.");
     } finally {
       setLoading(false);
     }
   }, [flushQueue]);
 
-  useEffect(() => {
-    void refresh();
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  const saveTrip = useCallback(async (input: TripInput) => {
+    try {
+      const { trip } = await api.createTrip(input);
+      await refresh();
+      return trip;
+    } catch {
+      const queued = await enqueueTrip(input);
+      await refresh();
+      return queued;
+    }
   }, [refresh]);
 
-  const saveTrip = useCallback(
-    async (input: TripInput) => {
-      try {
-        const { trip } = await api.createTrip(input);
-        await refresh();
-        return trip;
-      } catch {
-        const queued = await enqueueTrip(input);
-        await refresh();
-        return queued;
-      }
-    },
-    [refresh],
-  );
-
-  const deleteTrip = useCallback(
-    async (trip: Trip) => {
-      if (trip.pending || trip.id.startsWith("local-")) {
-        await removeQueued(trip.id);
-      } else {
-        await api.deleteTrip(trip.id);
-      }
-      await refresh();
-    },
-    [refresh],
-  );
+  const deleteTrip = useCallback(async (trip: Trip) => {
+    if (trip.pending || trip.id.startsWith("local-")) await removeQueued(trip.id);
+    else await api.deleteTrip(trip.id);
+    await refresh();
+  }, [refresh]);
 
   const clearTrips = useCallback(async () => {
     await clearQueue();
@@ -259,41 +247,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     await refresh();
   }, [refresh]);
 
-  const value = useMemo(
-    () => ({
-      trips,
-      stats,
-      factors,
-      online,
-      loading,
-      error,
-      lastRefreshedAt,
-      preferencesLoaded,
-      measurementSystem: preferences.measurementSystem,
-      defaultLoggingMethod: preferences.defaultLoggingMethod,
-      themePreference: preferences.themePreference,
-      resolvedTheme,
-      displayPrecision: preferences.displayPrecision,
-      showDrivingComparison: preferences.showDrivingComparison,
-      recentTrips: preferences.recentTrips,
-      setMeasurementSystem,
-      setDefaultLoggingMethod,
-      setThemePreference,
-      setDisplayPrecision,
-      setShowDrivingComparison,
-      setRecentTrips,
-      refresh,
-      saveTrip,
-      deleteTrip,
-      clearTrips,
-    }),
-    [
-      trips, stats, factors, online, loading, error, lastRefreshedAt, preferencesLoaded,
-      preferences, resolvedTheme, setMeasurementSystem, setDefaultLoggingMethod,
-      setThemePreference, setDisplayPrecision, setShowDrivingComparison, setRecentTrips,
-      refresh, saveTrip, deleteTrip, clearTrips,
-    ],
-  );
+  const value = useMemo(() => ({
+    trips, stats, factors, online, loading, error, lastRefreshedAt, preferencesLoaded,
+    measurementSystem: preferences.measurementSystem,
+    defaultLoggingMethod: preferences.defaultLoggingMethod,
+    themePreference: preferences.themePreference,
+    resolvedTheme,
+    displayPrecision: preferences.displayPrecision,
+    showDrivingComparison: preferences.showDrivingComparison,
+    recentTrips: preferences.recentTrips,
+    setMeasurementSystem, setDefaultLoggingMethod, setThemePreference, setDisplayPrecision,
+    setShowDrivingComparison, setRecentTrips, refresh, saveTrip, deleteTrip, clearTrips,
+  }), [
+    trips, stats, factors, online, loading, error, lastRefreshedAt, preferencesLoaded, preferences,
+    resolvedTheme, setMeasurementSystem, setDefaultLoggingMethod, setThemePreference, setDisplayPrecision,
+    setShowDrivingComparison, setRecentTrips, refresh, saveTrip, deleteTrip, clearTrips,
+  ]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
