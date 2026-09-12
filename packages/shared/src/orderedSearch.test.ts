@@ -67,3 +67,18 @@ test("prefix-of-label ranks ahead of later subsequence", () => {
     `expected prefix-of-label first, got ${first.label}`,
   );
 });
+
+test("tokenize keeps digits so street numbers stay in the query", () => {
+  assert.deepEqual(tokenize("117 Kings"), ["117", "kings"]);
+  assert.deepEqual(tokenize("117 filler Kings", true), ["117", "filler", "kings"]);
+});
+
+test('"117 Kings" does NOT match "117 filler Kings"', () => {
+  const places = [
+    { label: "117 filler Kings", lat: 0, lng: 0 },
+    { label: "117 Kings Road", lat: 1, lng: 1 },
+  ];
+  const hits = orderedPlaceSearch("117 Kings", places);
+  assert.ok(!hits.some((h) => /filler/i.test(h.label)));
+  assert.ok(hits.some((h) => h.label === "117 Kings Road"));
+});

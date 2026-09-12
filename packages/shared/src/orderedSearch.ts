@@ -20,12 +20,12 @@ export function foldLatinAccents(s: string): string {
   return s.normalize("NFD").replace(/\p{M}/gu, "");
 }
 
-/** Lowercase and split on non-letters into word tokens. */
+/** Lowercase and split on non-alphanumerics into word tokens (keeps digits). */
 export function tokenize(s: string, foldAccents = false): string[] {
   const base = foldAccents ? foldLatinAccents(s) : s;
   return base
     .toLowerCase()
-    .split(/[^a-z]+/)
+    .split(/[^a-z0-9]+/)
     .filter(Boolean);
 }
 
@@ -41,41 +41,40 @@ function matchesOrdered(
   if (queryTokens.length === 0) {
     return { ok: false, startIndex: -1, lastExact: false };
   }
-
-  let qi = 0;
-  let startIndex = -1;
-  let lastExact = false;
-
-  for (let li = 0; li < labelTokens.length && qi < queryTokens.length; li++) {
-    const q = queryTokens[qi]!;
-    const label = labelTokens[li]!;
-    const isLastQuery = qi === queryTokens.length - 1;
-
-    if (isLastQuery) {
-      if (label === q || label.startsWith(q)) {
-        if (startIndex < 0) startIndex = li;
-        lastExact = label === q;
-        qi += 1;
-        break;
-      }
-    } else if (label === q) {
-      if (startIndex < 0) startIndex = li;
-      qi += 1;
-    }
+  if (labelTokens.length < queryTokens.length) {
+    return { ok: false, startIndex: -1, lastExact: false };
   }
 
-  return {
-    ok: qi === queryTokens.length,
-    startIndex,
-    lastExact,
-  };
+  // Contiguous window only — "117 Kings" must not match "117 filler Kings".
+  for (let start = 0; start <= labelTokens.length - queryTokens.length; start++) {
+    let ok = true;
+    let lastExact = false;
+    for (let qi = 0; qi < queryTokens.length; qi++) {
+      const q = queryTokens[qi]!;
+      const label = labelTokens[start + qi]!;
+      const isLast = qi === queryTokens.length - 1;
+      if (isLast) {
+        if (!(label === q || label.startsWith(q))) {
+          ok = false;
+          break;
+        }
+        lastExact = label === q;
+      } else if (label !== q) {
+        ok = false;
+        break;
+      }
+    }
+    if (ok) return { ok: true, startIndex: start, lastExact };
+  }
+
+  return { ok: false, startIndex: -1, lastExact: false };
 }
 
 /**
  * Ordered ASCII place search over a gazetteer list.
- * Query tokens must appear in order in the label; the last query token may be a
- * prefix of the matching label token (typeahead). Prefer matches that start at
- * the beginning of the label.
+ * Query tokens must appear as a contiguous run in the label (no filler words
+ * between them). The last query token may be a prefix of that label token
+ * (typeahead). Prefer matches that start at the beginning of the label.
  */
 export function orderedPlaceSearch(
   query: string,

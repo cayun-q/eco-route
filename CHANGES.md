@@ -36,3 +36,8 @@ npm run test --workspace=@carbonroute/shared
 ```
 
 All shared tests passed (including new orderedSearch cases).
+
+## Follow-up: contiguous words
+
+- Query tokens must be a **contiguous** run in the label. `117 Kings` matches `117 Kings Road` and does **not** match `117 filler Kings`.
+- Tokenize keeps digits so street numbers stay in the query.
