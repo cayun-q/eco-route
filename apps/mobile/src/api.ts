@@ -28,7 +28,7 @@ export const api = {
   factors: () => request<{ factors: EmissionFactor[] }>("/api/factors"),
   searchPlaces: (query: string) =>
     request<{ places: Place[] }>(`/api/geocode/search?q=${encodeURIComponent(query)}`),
-  estimate: (body: { origin: string; destination: string; mode: TransportMode }) =>
+  estimate: (body: { origin: string; destination: string; mode: TransportMode; direct?: boolean }) =>
     request<RouteEstimate>("/api/routes/estimate", {
       method: "POST",
       body: JSON.stringify(body),
