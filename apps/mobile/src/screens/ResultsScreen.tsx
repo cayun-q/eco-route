@@ -6,10 +6,12 @@ import { colors, space, type as font } from "../theme";
 import { Button, Heading, Muted, Screen } from "../ui";
 import { MapPreview } from "../components/MapPreview";
 import { formatKg, modeLabel, placeDisplayLabel } from "../format";
+import { useStore } from "../store";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Results">;
 
 export function ResultsScreen({ navigation, route }: Props) {
+  const { measurementSystem } = useStore();
   const { trip } = route.params;
   const estimate: RouteEstimate = {
     origin: { label: trip.originLabel, lat: trip.originLat, lng: trip.originLng },
@@ -36,7 +38,7 @@ export function ResultsScreen({ navigation, route }: Props) {
         </Muted>
 
         <View style={styles.hero}>
-          <Text style={styles.heroValue}>{formatKg(trip.co2eKg)}</Text>
+          <Text style={styles.heroValue}>{formatKg(trip.co2eKg, measurementSystem)}</Text>
           <Text style={styles.heroLabel}>CO₂e · {trip.factorSource}</Text>
         </View>
 
