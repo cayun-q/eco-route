@@ -4,6 +4,7 @@ import { MODES } from "@carbonroute/shared";
 import { geocode, GeocodeError } from "../services/geocode";
 import { routeBetween } from "../services/routing";
 import { emissionsFor } from "../services/emissions";
+import { buildPlaneJourney } from "../services/multimodal";
 
 export const estimateRouter = Router();
 
@@ -27,6 +28,35 @@ estimateRouter.post("/", async (req, res, next) => {
     }
 
     const [origin, destination] = await Promise.all([geocode(originQ), geocode(destQ)]);
+
+    if (mode === "plane") {
+      const journey = await buildPlaneJourney(origin, destination);
+      let co2eKg = 0;
+      let planeFactor = null as Awaited<ReturnType<typeof emissionsFor>>["factor"] | null;
+      for (const leg of journey.legs) {
+        const emissions = await emissionsFor(leg.mode, leg.distanceKm);
+        co2eKg += emissions.co2eKg;
+        if (leg.mode === "plane" && !planeFactor) planeFactor = emissions.factor;
+      }
+      const fallbackFactor = (await emissionsFor("plane", 0)).factor;
+
+      res.json({
+        origin,
+        destination,
+        mode,
+        distanceKm: journey.distanceKm,
+        durationMin: journey.durationMin,
+        polyline: journey.polyline,
+        legs: journey.legs,
+        co2eKg: Math.round(co2eKg * 1000) / 1000,
+        factor: planeFactor ?? fallbackFactor,
+        drivingCo2eKg: null,
+        vsDrivingKg: null,
+        provider: "openflights",
+      });
+      return;
+    }
+
     const routed = await routeBetween(origin, destination, mode);
     const emissions = await emissionsFor(mode, routed.distanceKm);
 
