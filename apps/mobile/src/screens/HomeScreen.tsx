@@ -21,7 +21,18 @@ function formatRefreshTime(value: number | null): string | null {
 }
 
 export function HomeScreen({ navigation }: Props) {
-  const { trips, stats, loading, error, online, lastRefreshedAt, refresh, deleteTrip, clearTrips } = useStore();
+  const {
+    trips,
+    stats,
+    loading,
+    error,
+    online,
+    lastRefreshedAt,
+    measurementSystem,
+    refresh,
+    deleteTrip,
+    clearTrips,
+  } = useStore();
   const insets = useSafeAreaInsets();
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -67,7 +78,7 @@ export function HomeScreen({ navigation }: Props) {
 
         <View style={styles.statRow}>
           <View style={styles.stat}>
-            <Text style={styles.statValue}>{formatKg(stats.totalCo2eKg)}</Text>
+            <Text style={styles.statValue}>{formatKg(stats.totalCo2eKg, measurementSystem)}</Text>
             <Text style={styles.statLabel}>logged CO₂e</Text>
           </View>
           <View style={styles.statRule} />
