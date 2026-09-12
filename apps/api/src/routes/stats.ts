@@ -11,7 +11,7 @@ statsRouter.get("/", async (_req, res, next) => {
       count: string;
       co2e: string;
     }>(
-      "SELECT mode, COUNT(*)::text AS count, COALESCE(SUM(co2e_kg), 0)::text AS co2e FROM trips WHERE mode IN ('car', 'plane') GROUP BY mode",
+      "SELECT mode, COUNT(*)::text AS count, COALESCE(SUM(co2e_kg), 0)::text AS co2e FROM trips WHERE mode IN ('car', 'ev', 'plane') GROUP BY mode",
     );
     const byMode = Object.fromEntries(
       MODES.map((mode) => [mode, { count: 0, co2eKg: 0 }]),
