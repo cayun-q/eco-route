@@ -25,15 +25,31 @@ test("factorForMode reads the table row", () => {
   assert.equal(factorForMode(table, "plane").gPerKm, 245.87);
 });
 
-test("comparative Eco-Scores stay spread out on long trips", () => {
+test("comparative Eco-Scores are blended rather than forced to 100 and 30", () => {
   const scores = calculateComparativeEcoScores([
     { key: "ev", co2eKg: 45 },
     { key: "car", co2eKg: 171 },
     { key: "plane", co2eKg: 246 },
   ]);
-  assert.equal(scores.ev, 100);
-  assert.equal(scores.plane, 30);
-  assert.ok(scores.car > 30 && scores.car < 100);
+  assert.ok(scores.ev < 100 && scores.ev > scores.car);
+  assert.ok(scores.car > scores.plane);
+  assert.ok(scores.plane !== 30);
+});
+
+test("longer otherwise-proportional trips receive lower Eco-Scores", () => {
+  const shortTrip = calculateComparativeEcoScores([
+    { key: "ev", co2eKg: 4.5 },
+    { key: "car", co2eKg: 17.1 },
+    { key: "plane", co2eKg: 24.6 },
+  ]);
+  const longTrip = calculateComparativeEcoScores([
+    { key: "ev", co2eKg: 45 },
+    { key: "car", co2eKg: 171 },
+    { key: "plane", co2eKg: 246 },
+  ]);
+  assert.ok(longTrip.ev < shortTrip.ev);
+  assert.ok(longTrip.car < shortTrip.car);
+  assert.ok(longTrip.plane < shortTrip.plane);
 });
 
 test("haversine Portland to Seattle is ~233 km", () => {
