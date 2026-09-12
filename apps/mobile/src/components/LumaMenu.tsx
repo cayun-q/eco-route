@@ -16,7 +16,11 @@ export function LumaMenuButton() {
 
   function go(route: MenuRoute) {
     setOpen(false);
-    navigation.navigate(route as never);
+    if (route === "Home") navigation.navigate("Home");
+    if (route === "LogTrip") navigation.navigate("LogTrip");
+    if (route === "Settings") navigation.navigate("Settings");
+    if (route === "About") navigation.navigate("About");
+    if (route === "Credits") navigation.navigate("Credits");
   }
 
   return (
