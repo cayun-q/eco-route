@@ -24,6 +24,27 @@
           <option value="foot-walking">Walking</option>
         </select>
       </label>
+      <section id="eco-score-card" class="eco-score-card" aria-label="Eco-Score">
+        <div class="eco-score-card__header">
+          <h2>Eco-Score</h2>
+          <p class="eco-score-card__value">
+            <span id="eco-score-value">0</span>
+            <span class="eco-score-card__out-of">/ 100</span>
+          </p>
+        </div>
+        <div
+          class="eco-score-card__track"
+          role="meter"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-labelledby="eco-score-value"
+        >
+          <div id="eco-score-meter" class="eco-score-card__meter"></div>
+        </div>
+        <p class="eco-score-card__hint">
+          Higher score = lower carbon intensity for this mode.
+        </p>
+      </section>
       <p id="status">Click the map to set a start point.</p>
       <dl id="stats" hidden>
         <div>

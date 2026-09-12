@@ -1,3 +1,5 @@
+import { renderEcoScore } from "./ecoScore.js";
+
 const ORS_API_KEY = import.meta.env.VITE_ORS_API_KEY;
 const ORS_DIRECTIONS_BASE =
   "https://api.openrouteservice.org/v2/directions";
@@ -190,6 +192,7 @@ function showRoute(feature, mode) {
   co2El.textContent = formatCo2(co2Kg);
   statsEl.hidden = false;
   resetBtn.hidden = false;
+  renderEcoScore(mode);
   setStatus(`Route loaded (${mode.label}).`);
 }
 
@@ -248,5 +251,8 @@ async function onMapClick(event) {
 map.on("click", onMapClick);
 resetBtn.addEventListener("click", resetRoute);
 modeSelect.addEventListener("change", () => {
+  renderEcoScore(getSelectedMode());
   void loadRouteForCurrentPoints();
 });
+
+renderEcoScore(getSelectedMode());

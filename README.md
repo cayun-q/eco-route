@@ -26,13 +26,16 @@ Open the URL printed in the terminal (port `43123` by default).
 3. Click again to set an **end** point.
 4. The app requests a matching OpenRouteService profile and shows distance, duration, and estimated CO₂.
 5. Changing the mode with both points set re-fetches and re-renders the route.
+6. The **Eco-Score** card (0–100) updates with the mode: higher score means lower carbon intensity.
 
-| Mode | ORS profile | CO₂ factor |
-| --- | --- | --- |
-| Driving (Car) | `driving-car` | 171 g/km |
-| Electric Vehicle (EV) | `driving-car` | 45 g/km |
-| Bicycle | `cycling-regular` | 0 g/km |
-| Walking | `foot-walking` | 0 g/km |
+| Mode | ORS profile | CO₂ factor | Eco-Score |
+| --- | --- | --- | --- |
+| Driving (Car) | `driving-car` | 171 g/km | 0 |
+| Electric Vehicle (EV) | `driving-car` | 45 g/km | 74 |
+| Bicycle | `cycling-regular` | 0 g/km | 100 |
+| Walking | `foot-walking` | 0 g/km | 100 |
+
+Eco-Score is `round(100 × (1 − g_CO₂/km ÷ 171))`, implemented in `src/ecoScore.js`.
 
 ## Notes
 

@@ -53,6 +53,65 @@ body {
   font-size: 0.9rem;
 }
 
+.eco-score-card {
+  margin: 0 0 0.85rem;
+  padding: 0.75rem 0.8rem;
+  border-radius: 0.65rem;
+  background: linear-gradient(160deg, #ecfdf5 0%, #f0fdfa 55%, #f8fafc 100%);
+  border: 1px solid #99f6e4;
+}
+
+.eco-score-card__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.eco-score-card h2 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0f766e;
+}
+
+.eco-score-card__value {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #134e4a;
+  line-height: 1;
+}
+
+.eco-score-card__out-of {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #5eead4;
+}
+
+.eco-score-card__track {
+  margin-top: 0.55rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: #ccfbf1;
+  overflow: hidden;
+}
+
+.eco-score-card__meter {
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #14b8a6, #0f766e);
+  transition: width 0.25s ease;
+}
+
+.eco-score-card__hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: #0f766e;
+}
+
 #status {
   margin: 0;
   font-size: 0.9rem;
