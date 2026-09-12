@@ -126,7 +126,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
-  const updatePreference = useCallback(async <K extends keyof Preferences>(key: K, value: Preferences[K]) => {
+  const updatePreference = useCallback(async <K extends keyof Preferences,>(key: K, value: Preferences[K]) => {
     setPreferences((current) => {
       const next = { ...current, [key]: value };
       void AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
