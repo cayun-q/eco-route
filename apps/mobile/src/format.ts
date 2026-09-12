@@ -106,8 +106,9 @@ export function formatDate(iso: string): string {
 
 export function modeLabel(mode: TransportMode): string {
   if (mode === "car") return "Car";
+  if (mode === "ev") return "Electric car";
   if (mode === "plane") return "Plane";
-  return "Train";
+  return mode;
 }
 
 export function comparisonCopy(
@@ -119,7 +120,12 @@ export function comparisonCopy(
 ): string | null {
   if (!defaultShowDrivingComparison || comparisonMode == null || vsComparisonKg == null) return null;
   const amount = formatKg(Math.abs(vsComparisonKg), system, precision);
-  const comparisonLabel = comparisonMode === "plane" ? "flying" : "driving";
+  const comparisonLabel =
+    comparisonMode === "plane"
+      ? "flying"
+      : comparisonMode === "ev"
+        ? "driving electric"
+        : "driving";
 
   if (vsComparisonKg < 0) {
     return `${amount} CO₂e saved vs ${comparisonLabel}`;
