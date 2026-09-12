@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: carbonroute
+      POSTGRES_PASSWORD: carbonroute
+      POSTGRES_DB: carbonroute
+    ports:
+      - "5432:5432"
+    volumes:
+      - carbonroute_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U carbonroute -d carbonroute"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "43124:43124"
+    environment:
+      DATABASE_URL: postgres://carbonroute:carbonroute@postgres:5432/carbonroute
+      PORT: "43124"
+      ROUTING_PROVIDER: ${ROUTING_PROVIDER:-mock}
+      MAPBOX_ACCESS_TOKEN: ${MAPBOX_ACCESS_TOKEN:-}
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  carbonroute_pg:

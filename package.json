@@ -1,0 +1,22 @@
+{
+  "name": "carbonroute",
+  "private": true,
+  "workspaces": [
+    "apps/api",
+    "apps/mobile",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @carbonroute/api",
+    "api": "npm run dev -w @carbonroute/api",
+    "mobile": "npm run start -w @carbonroute/mobile",
+    "mobile:web": "npm run web -w @carbonroute/mobile",
+    "db:migrate": "npm run migrate -w @carbonroute/api",
+    "db:seed": "npm run seed -w @carbonroute/api",
+    "db:reset": "npm run reset -w @carbonroute/api",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
